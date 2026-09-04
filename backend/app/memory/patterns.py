@@ -145,6 +145,10 @@ class FailurePatternStore:
             times_seen=times_seen,
         )
 
+    def get_by_signature(self, signature: str) -> StoredPattern | None:
+        """Alias for recall to support pattern retrieval by signature key."""
+        return self.recall(signature)
+
     def all_patterns(self) -> list[StoredPattern]:
         with self._connect() as conn:
             signatures = [
