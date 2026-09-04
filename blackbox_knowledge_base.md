@@ -135,3 +135,12 @@ The Universal AgentEvent represents a normalized, framework-agnostic execution s
 - **Graph Models & Invariants**: Created `backend/app/graph/models.py` defining `GraphBuildError`, `GraphValidationError`, `GraphPath`, and the 7 Core Graph Invariants.
 - **Builder & Traversal Contracts**: Defined explicit signatures, return types, and docstrings in `backend/app/graph/builder.py` and `backend/app/graph/traversal.py`. Exported all contracts via `backend/app/graph/__init__.py`.
 - **Knowledge Base Update**: Appended Execution Graph Data Model specification and updated `Implementation Changelog`.
+
+### [Phase 1.1 - Task 3] Implement Execution Graph Builder
+- **Graph Builder**: Implemented `build_execution_graph(events: list[AgentEvent]) -> nx.DiGraph` in `backend/app/graph/builder.py`.
+- **Two-Pass Construction**:
+  - Pass 1 adds nodes (`graph.add_node(event.event_id, event=event)`) and raises `GraphBuildError` on duplicate `event_id` values.
+  - Pass 2 adds edges (`graph.add_edge(event.parent_event_id, event.event_id)`) and raises `GraphBuildError` if `parent_event_id` does not exist in the graph.
+- **Guarantees**: Ensures input order independence, supports multiple roots and branching traces, prevents placeholder parent node generation, and preserves intact `AgentEvent` objects on nodes.
+- **Pytest Unit Tests**: Created `backend/tests/test_graph_builder.py` covering single events, linear traces, branching, multiple roots, event model preservation, duplicate ID rejection, missing parent rejection, and input order independence (8 test functions, 21 total suite tests passing).
+- **Knowledge Base Update**: Documented Task 3 completion and architectural guarantees in `Implementation Changelog`.
