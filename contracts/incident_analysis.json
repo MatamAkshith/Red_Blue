@@ -1,0 +1,337 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BLACKBOX Incident Analysis (P1 -> P2 contract)",
+  "description": "Security evidence handed from the deterministic engine (P1) to the Understand/Featherless layer (P2). Not raw application logs.",
+  "$defs": {
+    "AgentEvent": {
+      "description": "Universal AgentEvent \u2014 the one frozen contract every Blackbox module\n(execution graph, detection, AEGIS, Understand layer) is built on top of.\n\nAgent events are untrusted input and must always be validated (i.e.\nparsed through this model) before being used in any analysis.",
+      "properties": {
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "parent_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Event Id"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "agent_id": {
+          "title": "Agent Id",
+          "type": "string"
+        },
+        "event_type": {
+          "$ref": "#/$defs/EventType"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target"
+        },
+        "resource": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resource"
+        },
+        "action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Action"
+        },
+        "permission": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Permission"
+        },
+        "trust_level": {
+          "$ref": "#/$defs/TrustLevel",
+          "default": "UNKNOWN"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "event_id",
+        "session_id",
+        "agent_id",
+        "event_type",
+        "source"
+      ],
+      "title": "AgentEvent",
+      "type": "object"
+    },
+    "BlastRadius": {
+      "description": "Mirrors the output of app.aegis.blast_radius.compute_blast_radius.",
+      "properties": {
+        "reachable_sensitive_resources": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reachable Sensitive Resources",
+          "type": "array"
+        },
+        "reachable_external_destinations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reachable External Destinations",
+          "type": "array"
+        },
+        "affected_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Affected Capabilities",
+          "type": "array"
+        },
+        "risk_score": {
+          "default": 0.0,
+          "title": "Risk Score",
+          "type": "number"
+        }
+      },
+      "title": "BlastRadius",
+      "type": "object"
+    },
+    "EventType": {
+      "enum": [
+        "INPUT",
+        "RETRIEVAL",
+        "DECISION",
+        "TOOL_CALL",
+        "TOOL_RESULT",
+        "ACTION"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "EvidenceItem": {
+      "description": "One deterministically-tagged fact supporting the incident. `category`\nis a free string; the Understand-layer evidence extractor recognizes a\nknown set (trust_boundary_crossing, privilege_change, data_movement,\nexternal_transmission, anomaly) for grouping and passes the rest through\nunclassified -- new categories don't break anything.",
+      "properties": {
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "category",
+        "description"
+      ],
+      "title": "EvidenceItem",
+      "type": "object"
+    },
+    "IncidentSeverity": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ],
+      "title": "IncidentSeverity",
+      "type": "string"
+    },
+    "PermissionFact": {
+      "description": "A permission-relevant fact P1 observed, e.g. an agent attempting to\nuse a privileged tool/resource, or a privilege change.",
+      "properties": {
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "resource": {
+          "title": "Resource",
+          "type": "string"
+        },
+        "permission": {
+          "title": "Permission",
+          "type": "string"
+        },
+        "granted": {
+          "title": "Granted",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "event_id",
+        "resource",
+        "permission",
+        "granted"
+      ],
+      "title": "PermissionFact",
+      "type": "object"
+    },
+    "SensitiveResource": {
+      "properties": {
+        "resource": {
+          "title": "Resource",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "resource_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resource Type"
+        }
+      },
+      "required": [
+        "resource",
+        "severity"
+      ],
+      "title": "SensitiveResource",
+      "type": "object"
+    },
+    "Severity": {
+      "enum": [
+        1,
+        3,
+        7,
+        10
+      ],
+      "title": "Severity",
+      "type": "integer"
+    },
+    "TrustLevel": {
+      "enum": [
+        "TRUSTED",
+        "UNTRUSTED",
+        "UNKNOWN"
+      ],
+      "title": "TrustLevel",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "incident_id": {
+      "title": "Incident Id",
+      "type": "string"
+    },
+    "agent_id": {
+      "title": "Agent Id",
+      "type": "string"
+    },
+    "session_id": {
+      "title": "Session Id",
+      "type": "string"
+    },
+    "incident_type": {
+      "title": "Incident Type",
+      "type": "string"
+    },
+    "severity": {
+      "$ref": "#/$defs/IncidentSeverity"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/AgentEvent"
+      },
+      "title": "Events",
+      "type": "array"
+    },
+    "attack_path": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Attack Path",
+      "type": "array"
+    },
+    "permissions": {
+      "items": {
+        "$ref": "#/$defs/PermissionFact"
+      },
+      "title": "Permissions",
+      "type": "array"
+    },
+    "sensitive_resources": {
+      "items": {
+        "$ref": "#/$defs/SensitiveResource"
+      },
+      "title": "Sensitive Resources",
+      "type": "array"
+    },
+    "blast_radius": {
+      "$ref": "#/$defs/BlastRadius"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/EvidenceItem"
+      },
+      "title": "Evidence",
+      "type": "array"
+    }
+  },
+  "required": [
+    "incident_id",
+    "agent_id",
+    "session_id",
+    "incident_type",
+    "severity"
+  ],
+  "type": "object"
+}

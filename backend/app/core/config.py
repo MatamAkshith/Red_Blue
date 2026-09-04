@@ -1,6 +1,14 @@
 import os
 from dataclasses import dataclass
 
+from dotenv import load_dotenv
+
+# Loaded once at import time so FEATHERLESS_API_KEY etc. from a local .env
+# (gitignored, never committed) are available before get_settings() reads
+# them. Searches the current directory and its parents, so this works
+# whether the backend is run from the repo root or from backend/.
+load_dotenv()
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -17,5 +25,7 @@ def get_settings() -> Settings:
         featherless_base_url=os.environ.get(
             "FEATHERLESS_BASE_URL", "https://api.featherless.ai/v1"
         ),
-        featherless_model=os.environ.get("FEATHERLESS_MODEL", "featherless/default"),
+        featherless_model=os.environ.get(
+            "FEATHERLESS_MODEL", "NousResearch/Meta-Llama-3.1-8B-Instruct"
+        ),
     )

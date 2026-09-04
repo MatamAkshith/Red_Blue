@@ -25,8 +25,14 @@ Real AI Agent -> Blackbox SDK -> Event Collector -> Normalizer -> Universal Agen
 | Execution graph (NetworkX) | `backend/app/graph/builder.py` | Stub |
 | Deterministic detection | `backend/app/detect/rules.py` | Stub |
 | AEGIS / blast radius | `backend/app/aegis/blast_radius.py` | Stub |
-| Evidence extraction | `backend/app/evidence/extractor.py` | Stub |
-| Understand layer + Featherless | `backend/app/understand/` | Stub |
+| P1 -> P2 contract (`IncidentAnalysis`) | `backend/app/contracts/incident_analysis.py`, `contracts/incident_analysis.json` | **Implemented** |
+| P1 evidence extraction (graph -> IncidentAnalysis) | `backend/app/evidence/extractor.py` | Stub |
+| P2 evidence extraction (IncidentAnalysis -> LLM-ready package) | `backend/app/understand/evidence/extractor.py` | **Implemented** |
+| Featherless client (OpenAI-compatible) | `backend/app/understand/featherless/client.py` | **Implemented**, live-tested |
+| Investigation schema + prompt | `backend/app/understand/investigation/schemas.py`, `prompts.py` | **Implemented** |
+| Investigator orchestration (`investigate(incident)`) | `backend/app/understand/investigation/investigator.py` | **Implemented** |
+| Deterministic fallback (Featherless unavailable) | `backend/app/understand/fallback/deterministic.py` | **Implemented** |
+| `POST /investigate` API route | `backend/app/api/routes_investigate.py` | **Implemented**, live-tested |
 | What-if simulation | `backend/app/whatif/simulator.py` | Stub |
 | Intervention engine | `backend/app/intervention/engine.py` | Stub |
 | CHIMERA (re-attack) | `backend/app/chimera/replay.py` | Stub |
@@ -58,7 +64,18 @@ curl -X POST http://127.0.0.1:8000/events -H "Content-Type: application/json" -d
   "resource": "customer_database", "trust_level": "UNTRUSTED"
 }'
 curl "http://127.0.0.1:8000/events?session_id=S1"
+
+curl -X POST http://127.0.0.1:8000/investigate -H "Content-Type: application/json" -d @- <<'JSON'
+{
+  "incident_id": "INC-1", "agent_id": "A1", "session_id": "S1",
+  "incident_type": "INDIRECT_PROMPT_INJECTION", "severity": "CRITICAL",
+  "events": [], "attack_path": [], "permissions": [],
+  "sensitive_resources": [], "blast_radius": {}, "evidence": []
+}
+JSON
 ```
+
+`POST /investigate` accepts a P1 `IncidentAnalysis` payload (see `contracts/incident_analysis.json`) and returns a structured `Investigation` via Featherless, falling back to the deterministic path if Featherless is unavailable. The route is a thin FastAPI translation layer over `app.understand.investigation.investigator.investigate()`, which has no FastAPI dependency and is tested independently of it.
 
 ## Tests
 
@@ -66,6 +83,15 @@ curl "http://127.0.0.1:8000/events?session_id=S1"
 cd backend
 pytest tests -q
 ```
+
+The automated suite never calls the real Featherless API — `FeatherlessClient` is mocked in `tests/test_featherless_client.py`. To manually verify a real Featherless call end-to-end (requires `FEATHERLESS_API_KEY` and `FEATHERLESS_MODEL` set, e.g. via `.env`):
+
+```bash
+cd backend
+python scripts/featherless_smoke_test.py
+```
+
+This script is not collected by pytest and never runs automatically.
 
 ## Frontend
 
@@ -77,12 +103,22 @@ npm run dev
 
 ## Environment variables
 
+Copy `.env.example` to `.env` (gitignored, never commit it) and fill in real values:
+
+```bash
+cp .env.example .env
+```
+
 | Variable | Purpose | Default |
 |---|---|---|
 | `BLACKBOX_DB_PATH` | SQLite file for the event store | `blackbox.db` |
 | `FEATHERLESS_API_KEY` | Featherless API key (never hardcode) | none |
 | `FEATHERLESS_BASE_URL` | Featherless OpenAI-compatible base URL | `https://api.featherless.ai/v1` |
-| `FEATHERLESS_MODEL` | Model name, configurable | `featherless/default` |
+| `FEATHERLESS_MODEL` | Model name, configurable | `NousResearch/Meta-Llama-3.1-8B-Instruct` |
+
+## P1 -> P2 contract
+
+`contracts/incident_analysis.json` is the language-agnostic JSON Schema for `IncidentAnalysis` — the security evidence P1 (execution graph + detection + AEGIS) hands to P2 (Understand/Featherless). The Pydantic source of truth is `backend/app/contracts/incident_analysis.py`; the JSON file is generated from it. It represents evidence P1 has already determined to be true, not raw application logs, and not something the LLM is asked to (re)discover.
 
 ## Development rules
 
@@ -95,6 +131,34 @@ npm run dev
 7. Blackbox must not crash if Featherless is unavailable — fall back to deterministic templates.
 8. No hardcoded secrets — everything Featherless-related comes from environment variables.
 
+## Person 2 (Understand/Featherless) — Definition of Done
+
+- [x] P1 -> P2 contract is frozen (`contracts/incident_analysis.json`, `backend/app/contracts/incident_analysis.py`)
+- [x] Evidence extractor works (`backend/app/understand/evidence/extractor.py`)
+- [x] Security evidence package is generated deterministically (no LLM call in `build_prompt_evidence`)
+- [x] Featherless configuration works (`.env` + `backend/app/core/config.py`)
+- [x] Featherless client works (`backend/app/understand/featherless/client.py`)
+- [x] Investigation schemas work (`backend/app/understand/investigation/schemas.py`)
+- [x] Investigation prompts work (`backend/app/understand/investigation/prompts.py`)
+- [x] Investigator pipeline works (`backend/app/understand/investigation/investigator.py`)
+- [x] Deterministic fallback works (`backend/app/understand/fallback/deterministic.py`)
+- [x] Featherless integration works with a real request (live-verified, see below)
+- [x] BLACKBOX can consume the investigation result (`POST /investigate`)
+- [x] Synthetic end-to-end investigation works (`backend/tests/test_end_to_end_demo.py`)
+- [x] Featherless failure is handled (`backend/tests/test_failure_behavior.py`, condition B)
+- [x] Malformed LLM output is handled safely (`backend/tests/test_failure_behavior.py`, condition D)
+- [x] Automated tests pass (60/60, no network calls)
+- [x] No secrets are committed (audited — see Security notes below)
+- [x] P1 remains the source of security truth (Investigation carries no `attack_path`/`blast_radius`/`permissions`/`sensitive_resources`/`events` fields; nothing the LLM returns can overwrite a P1 fact)
+
+Person 2's milestone is complete. Remaining Phase-2 work (execution graph, detection, AEGIS, real test agent + SDK, what-if/intervention, CHIMERA, self-protection, frontend data wiring) is explicitly out of scope here and picked up separately.
+
+## Security notes
+
+- The Featherless API key is only ever read via `os.environ`/`.env` (`backend/app/core/config.py`) — never hardcoded, never returned by an API response, never logged.
+- `.env` is gitignored (verified at both repo root and nested paths); `.env.example` holds placeholders only.
+- `backend/scripts/featherless_smoke_test.py` is a manual-only script, not collected by pytest — the automated suite (`pytest tests`) never depends on network access or a real key.
+
 ## Next modules
 
-In spec order: execution graph builder -> deterministic detection rules -> AEGIS blast radius -> the real test agent + SDK wiring -> Understand/Featherless -> what-if/intervention/CHIMERA -> live frontend data wiring. Each gets implemented and tested on its own, per the rules above.
+In spec order: execution graph builder -> deterministic detection rules -> AEGIS blast radius -> the real test agent + SDK wiring -> what-if/intervention/CHIMERA -> self-protection/Safe Mode -> live frontend data wiring. Each gets implemented and tested on its own, per the rules above.
