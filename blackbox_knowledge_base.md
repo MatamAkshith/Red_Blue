@@ -121,8 +121,6 @@ The Universal AgentEvent represents a normalized, framework-agnostic execution s
 6. **Invariant 6: Deterministic execution** (Identical event input produces identical graph topology).
 7. **Invariant 7: No security semantics** (Pure structural representation; no vulnerability scoring).
 
----
-
 ## 8. P1.1 — Execution Graph Foundation: DONE
 
 Phase 1.1 is officially closed and verified.
@@ -132,6 +130,22 @@ Phase 1.1 is officially closed and verified.
 - **Determinism & Forensic Validation**: Guaranteed by explicit list sorting across all traversal functions and strict 7-point structural verification in `validate_execution_graph`.
 - **Scope Compliance**: Zero security detection, LLMs, risk scores, or future Phase 1.2+ scope leaked into P1.1.
 - **Test Coverage**: 47 total automated unit and integration tests passing in `<0.4s`.
+
+---
+
+## 9. P1.2 Detection Architecture & Contracts
+
+Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the security contract between P1.1 (Execution Graph) and P2 (Understand / Featherless Reasoning Layer).
+
+### Architectural Contracts
+- **Input**: `ExecutionGraph` (`networkx.DiGraph`) constructed by P1.1.
+- **Output**: `List[DetectionFinding]` containing structured forensic facts.
+- **Detector Types**: `INDIRECT_PROMPT_INJECTION`, `TOOL_ABUSE`, `PRIVILEGE_VIOLATION`, `DATA_EXFILTRATION`.
+- **Severity Levels**: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` (deterministic policy violation weight, NOT an LLM score).
+- **Confidence**: Floating point value (0.0 to 1.0) indicating rule condition satisfaction score.
+
+### Evidence Separation Principle
+`DetectionFinding` explicitly separates deterministic forensic facts (`event_ids`, `evidence`, `graph_path`) from detector interpretation (`title`, `description`). This guarantees that P2 (Featherless) consumes immutable forensic evidence.
 
 ---
 
@@ -181,20 +195,26 @@ Phase 1.1 is officially closed and verified.
   5. **Cycle Detection (DAG)**: Verifies `nx.is_directed_acyclic_graph(graph)` is True to prevent infinite execution loops.
   6. **Parent Edge Correctness & Root Consistency**: Verifies every non-root event has an exact directed edge from its `parent_event_id`, and `parent_event_id=None` nodes have `in_degree==0`.
   7. **No Unexpected Edges**: Verifies all directed edges `u -> v` are justified by `v`'s `parent_event_id == u`.
-- **Pytest Unit Tests**: Created `backend/tests/test_graph_validation.py` covering 10 scenarios (valid single, linear, branching, multi-root, missing node, unexpected node, missing parent edge, unexpected edge, cycle, and identity mismatch).
+- **Pytest Unit Tests**: Created `backend/tests/test_graph_validation.py` covering 10 scenarios.
 - **Knowledge Base Update**: Documented Task 5 completion in `Implementation Changelog`.
 
 ### [Phase 1.1 - Tasks 6 & 7] Integration Test Suite & Final Boundary Audit
-- **End-to-End Integration Tests**: Created `backend/tests/test_graph_integration.py` testing the full `events -> build_execution_graph -> validate_execution_graph -> traversal` pipeline across 6 scenarios:
-  1. Linear pipeline (A $\rightarrow$ B $\rightarrow$ C validation and path extraction)
-  2. Branching pipeline (A $\rightarrow$ B, A $\rightarrow$ C validation and descendant extraction)
-  3. Multi-root pipeline (A $\rightarrow$ B, C $\rightarrow$ D tree isolation validation)
-  4. End-to-end event payload preservation verification
-  5. Deterministic ordering under scrambled input order (`[D, C, A, B]`)
-  6. End-to-end builder and validator rejection handling
+- **End-to-End Integration Tests**: Created `backend/tests/test_graph_integration.py` testing the full `events -> build_execution_graph -> validate_execution_graph -> traversal` pipeline across 6 scenarios.
 - **Architectural Boundary Audit**:
   - **Dependency Audit**: Verified `networkx` is the only external dependency. Zero graph DBs, Redis, or Kafka added.
   - **Storage Isolation Audit**: Verified zero imports of `sqlite3`, `sqlalchemy`, or database models in `backend/app/graph/`.
   - **HTTP Isolation Audit**: Verified zero imports of `fastapi`, `starlette`, routing, or HTTP exceptions in `backend/app/graph/`.
 - **Final Test Verification**: All 47 suite tests passed in 0.37s.
 - **Phase Closure**: Appended Section 8 closing Phase 1.1 in `blackbox_knowledge_base.md`.
+
+### [Phase 1.2.1] Define Detection Engine Architecture & Contracts
+- **Detection Models & Enums**: Created `backend/app/detection/models.py` defining:
+  - `DetectorType` Enum (`INDIRECT_PROMPT_INJECTION`, `TOOL_ABUSE`, `PRIVILEGE_VIOLATION`, `DATA_EXFILTRATION`)
+  - `Severity` Enum (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL` - deterministic policy weights)
+  - `DetectionFinding` Pydantic model (separating deterministic facts `event_ids`, `evidence`, `graph_path` from interpretation)
+  - Exception classes `DetectionError` and `DetectionContractError`
+- **Interfaces & Engine**: Created `backend/app/detection/interfaces.py` (`BaseDetector` ABC) and `backend/app/detection/engine.py` (`DetectionEngine` orchestrator).
+  - Implemented graph validation (`None` graph raises `DetectionError`, empty graph returns `[]`).
+  - Implemented stable, deterministic findings sorting (Severity priority descending $\rightarrow$ finding_id $\rightarrow$ primary event_id).
+- **Pytest Contract Suite**: Created `backend/tests/test_detection_contracts.py` covering model instantiation, field validation, deterministic serialization, engine registration, empty/invalid graph handling, and multi-run output determinism (6 test functions, 53 total suite tests passing in 0.35s).
+- **Knowledge Base Update**: Added Section 9 (Detection Architecture) and updated `Implementation Changelog`.
