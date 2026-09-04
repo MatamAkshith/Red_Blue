@@ -282,6 +282,14 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
 - **Causality & Lineage Tracking**: Maintains internal `current_parent_id` state tracking across event lifecycle callbacks (`on_input`, `on_retrieval`, `on_decision`, `on_tool_call`, `on_tool_result`, `on_action`), generating deterministic event IDs (`E1`, `E2`, ...) and automatically linking child events to establish causal execution lineages.
 - **Contract Adherence**: Strictly constructs standard `AgentEvent` objects using existing schemas and `EventType`/`TrustLevel` enums.
 
+### [Task 2 - Normalize Layer] Strict Event Normalizer & Validation Layer
+- **Normalizer Module**: Created `backend/app/sdk/normalize.py` implementing `Normalizer` and `normalize_event()`, raising custom `NormalizationError(ValueError)` on invalid inputs. Exported via `backend/app/sdk/__init__.py`.
+- **Strict Input Validation**: Enforces mandatory non-empty `session_id`, `agent_id`, `source`, and `event_id`. Strictly validates `event_type` and `trust_level` enum values/strings, rejecting malformed inputs rather than silently dropping or mutating them.
+- **Trust & Permission Preservation**: Preserves original `trust_level` boundaries (`UNTRUSTED` inputs remain `UNTRUSTED`) and explicitly preserves declared `permission` in `metadata["declared_permission"]`.
+- **Safe Metadata Merging**: Merges arbitrary raw payload kwargs into `metadata` without overwriting core `AgentEvent` schema fields.
+- **Observer Integration**: Integrated `normalize_event()` into `BlackboxObserver._create_event()` so all observer callbacks automatically pass through strict normalization and validation.
+
+
 
 
 

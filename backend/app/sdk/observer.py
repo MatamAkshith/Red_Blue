@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.sdk.normalize import normalize_event
 
 
 class BlackboxObserver:
@@ -34,10 +35,7 @@ class BlackboxObserver:
         event_id = self._generate_event_id()
         parent_id = self.current_parent_id
 
-        if isinstance(trust_level, str):
-            trust_level = TrustLevel(trust_level)
-
-        event = AgentEvent(
+        event = normalize_event(
             event_id=event_id,
             parent_event_id=parent_id,
             session_id=self.session_id,
@@ -49,7 +47,7 @@ class BlackboxObserver:
             action=action,
             permission=permission,
             trust_level=trust_level,
-            metadata=metadata if metadata is not None else {},
+            metadata=metadata,
         )
 
         self.current_parent_id = event_id
