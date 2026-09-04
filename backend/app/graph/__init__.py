@@ -7,9 +7,11 @@ from app.graph.traversal import (
     get_leaf_events,
     get_root_events,
 )
+from app.graph.validation import validate_execution_graph
 
 __all__ = [
     "build_execution_graph",
+    "validate_execution_graph",
     "GraphBuildError",
     "GraphPath",
     "GraphValidationError",

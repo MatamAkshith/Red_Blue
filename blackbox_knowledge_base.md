@@ -156,5 +156,18 @@ The Universal AgentEvent represents a normalized, framework-agnostic execution s
   - Explicitly sorts all returned sets of event IDs alphabetically to eliminate non-deterministic set ordering.
   - Validates node presence prior to traversal; raises `GraphValidationError` if a node does not exist.
   - Catches `nx.NetworkXNoPath` when no path connects `source` and `target` and raises `GraphValidationError`.
-- **Pytest Unit Tests**: Created `backend/tests/test_graph_traversal.py` covering root/leaf identification, linear/branching ancestors and descendants, multi-root isolation, valid/invalid execution paths, nonexistent node errors, and 100-iteration determinism checks (10 test functions, 31 total suite tests passing).
+- **Pytest Unit Tests**: Created `backend/tests/test_graph_traversal.py` covering root/leaf identification, linear/branching ancestors and descendants, multi-root isolation, valid/invalid execution paths, nonexistent node errors, and 100-iteration determinism checks.
 - **Knowledge Base Update**: Documented Task 4 completion in `Implementation Changelog`.
+
+### [Phase 1.1 - Task 5] Implement Forensic Graph Validation & Integrity
+- **Validation Module**: Created `backend/app/graph/validation.py` implementing `validate_execution_graph(events: list[AgentEvent], graph: nx.DiGraph) -> bool`.
+- **Structural Integrity Checks**:
+  1. **Node Count**: Ensures number of source events matches node count in `graph`.
+  2. **Node Identity**: Verifies every `event.event_id` exists in `graph`.
+  3. **No Extra Nodes**: Verifies every graph node corresponds to an event in source `events`.
+  4. **Event Preservation & Identity**: Verifies node stores intact `AgentEvent` payload and stored ID matches node ID.
+  5. **Cycle Detection (DAG)**: Verifies `nx.is_directed_acyclic_graph(graph)` is True to prevent infinite execution loops.
+  6. **Parent Edge Correctness & Root Consistency**: Verifies every non-root event has an exact directed edge from its `parent_event_id`, and `parent_event_id=None` nodes have `in_degree==0`.
+  7. **No Unexpected Edges**: Verifies all directed edges `u -> v` are justified by `v`'s `parent_event_id == u`.
+- **Pytest Unit Tests**: Created `backend/tests/test_graph_validation.py` covering 10 scenarios (valid single, linear, branching, multi-root, missing node, unexpected node, missing parent edge, unexpected edge, cycle, and identity mismatch).
+- **Knowledge Base Update**: Documented Task 5 completion in `Implementation Changelog`.
