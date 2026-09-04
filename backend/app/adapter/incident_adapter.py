@@ -6,7 +6,7 @@ into the frozen P1 -> P2 IncidentAnalysis contract consumed by the Understand la
 CRITICAL RESTRAINTS:
 - 100% deterministic graph traversals and set mapping.
 - No LLMs, Featherless, or heuristic score synthesis.
-- Strict validation: rejects mismatched graphs, missing node references, or invalid edges.
+- Strict validation: rejects mismatched graphs, missing node references, invalid edges, or cross-session inputs.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from typing import Any, Collection, List, Set, Tuple, Union
 import networkx as nx
 
 from .evidence_assembler import assemble_evidence
+from .exceptions import AdapterValidationError
 from ..aegis.models import ImpactResult
 from ..contracts.incident_analysis import (
     BlastRadius,
@@ -28,9 +29,6 @@ from ..contracts.incident_analysis import (
 )
 from ..detection.models import DetectionFinding, Severity as DetectionSeverity
 from ..events.schemas import AgentEvent
-
-
-from .exceptions import AdapterValidationError
 
 
 _SEVERITY_WEIGHTS: dict[str, int] = {
@@ -83,7 +81,8 @@ def build_incident_analysis(
         IncidentAnalysis: Immutable P1 -> P2 security evidence contract.
 
     Raises:
-        AdapterValidationError: If graph is None, empty, or if findings/impact reference absent nodes/edges.
+        AdapterValidationError: If graph is None, empty, if findings/impact reference absent nodes/edges,
+                                or if inputs span multiple session IDs.
     """
     if graph is None or not isinstance(graph, nx.DiGraph):
         raise AdapterValidationError("Execution graph must be a valid nx.DiGraph instance")
@@ -126,7 +125,7 @@ def build_incident_analysis(
                             f"Impact result '{imp.finding_id}' supporting path contains non-existent edge '{u}' -> '{v}'"
                         )
 
-    # Step 3: Extract Session & Agent Identity
+    # Step 3: Extract Session & Agent Identity & Validate Single Session Boundary
     all_referenced_eids: Set[str] = set()
     for f in findings:
         all_referenced_eids.update(f.event_ids)
@@ -141,6 +140,9 @@ def build_incident_analysis(
     session_ids = sorted({e.session_id for e in all_events if e.session_id})
     agent_ids = sorted({e.agent_id for e in all_events if e.agent_id})
 
+    if len(session_ids) > 1:
+        raise AdapterValidationError(f"Cross-session data rejected: events span multiple sessions {session_ids}")
+
     primary_session_id = session_ids[0] if session_ids else "unknown_session"
     primary_agent_id = agent_ids[0] if agent_ids else "unknown_agent"
 
@@ -154,7 +156,7 @@ def build_incident_analysis(
     detector_types = sorted({_get_severity_str(f.detector_type) for f in findings})
     incident_type = ",".join(detector_types) if detector_types else "POLICY_VIOLATION"
 
-    # Step 6: Severity Determination
+    # Step 6: Severity Determination (Max across findings & reachable sensitive resources)
     max_weight = 1
     for f in findings:
         sev_str = _get_severity_str(f.severity)
@@ -169,29 +171,31 @@ def build_incident_analysis(
     highest_sev_name = weight_to_sev_name.get(max_weight, "LOW")
     incident_severity = _map_to_incident_severity(highest_sev_name)
 
-    # Step 7: Continuous Attack Path
-    attack_path_nodes: List[str] = []
-    seen_path_nodes: Set[str] = set()
+    # Step 7: Continuous Coherent Attack Path via Graph Topological Sort
+    raw_path_nodes: Set[str] = set()
 
     for f in findings:
         for node in f.graph_path:
-            if node not in seen_path_nodes:
-                seen_path_nodes.add(node)
-                attack_path_nodes.append(node)
+            raw_path_nodes.add(node)
 
     for imp in impact_list:
         for path in imp.supporting_graph_paths:
             for node in path:
-                if node not in seen_path_nodes:
-                    seen_path_nodes.add(node)
-                    attack_path_nodes.append(node)
+                raw_path_nodes.add(node)
 
-    if not attack_path_nodes and findings:
+    if not raw_path_nodes and findings:
         for f in findings:
             for eid in f.event_ids:
-                if eid not in seen_path_nodes:
-                    seen_path_nodes.add(eid)
-                    attack_path_nodes.append(eid)
+                raw_path_nodes.add(eid)
+
+    if raw_path_nodes:
+        subgraph = graph.subgraph(raw_path_nodes)
+        try:
+            attack_path_nodes = list(nx.topological_sort(subgraph))
+        except nx.NetworkXUnfeasible:
+            attack_path_nodes = sorted(raw_path_nodes)
+    else:
+        attack_path_nodes = []
 
     # Step 8: Permissions Facts
     permission_facts: List[PermissionFact] = []
@@ -205,7 +209,8 @@ def build_incident_analysis(
             granted = True
 
             for f in findings:
-                if _get_severity_str(f.detector_type) == "PRIVILEGE_VIOLATION" and node_id in f.event_ids:
+                det_type = _get_severity_str(f.detector_type)
+                if det_type in ("PRIVILEGE_VIOLATION", "TOOL_ABUSE") and node_id in f.event_ids:
                     granted = False
                     break
 

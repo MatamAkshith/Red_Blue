@@ -257,6 +257,12 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
   - **Deterministic Output Order**: Sorts evidence items deterministically by `(event_timestamp, event_id, category, description)`.
 - **Integration**: Updated `build_incident_analysis` in `incident_adapter.py` to populate `IncidentAnalysis.evidence` via `assemble_evidence()`.
 
+### [Phase 1.4.3] Complete IncidentAnalysis Construction & Testing
+- **Coherent Attack Path Stitching**: Updated `build_incident_analysis` in `incident_adapter.py` to merge graph paths across multiple detection findings (e.g. Finding A: `E1 -> E2 -> E3` and Finding B: `E3 -> E4 -> E5`) into a single continuous, topologically-sorted attack path (`E1 -> E2 -> E3 -> E4 -> E5`) strictly respecting execution graph edges.
+- **Strict Validation & Exception Decoupling**: Extracted `AdapterValidationError` into `backend/app/adapter/exceptions.py` to resolve circular dependencies. Explicitly rejects invalid graphs, missing nodes, ungrounded edges, and cross-session inputs.
+- **Comprehensive Unit & Integration Suite**: Created `backend/tests/test_incident_adapter.py` with 9 automated tests verifying field mapping, multi-finding path merging, multi-impact aggregation, severity priority, determinism across 50 runs, schema revalidation, and full end-to-end integration (`P1 outputs → build_incident_analysis → IncidentAnalysis → P2.2 investigate()`).
+- **Regression Suite Verification**: 267 total automated tests across P1.1-P1.4 and P2.2 pass cleanly in 1.68s.
+
 
 ---
 
