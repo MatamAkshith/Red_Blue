@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Dict, List
 import networkx as nx
 
-from app.detection.interfaces import BaseDetector
-from app.detection.models import DetectionError, DetectionFinding, Severity
+from .interfaces import BaseDetector
+from .models import DetectionError, DetectionFinding, Severity
 
 SEVERITY_PRIORITY: Dict[str, int] = {
     Severity.CRITICAL.value if hasattr(Severity.CRITICAL, "value") else str(Severity.CRITICAL): 0,

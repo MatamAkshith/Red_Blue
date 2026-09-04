@@ -1,6 +1,6 @@
-from app.detection.engine import DetectionEngine
-from app.detection.interfaces import BaseDetector
-from app.detection.models import (
+from .engine import DetectionEngine
+from .interfaces import BaseDetector
+from .models import (
     DetectionContractError,
     DetectionError,
     DetectionFinding,

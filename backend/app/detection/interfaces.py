@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import List
 import networkx as nx
 
-from app.detection.models import DetectionFinding, DetectorType
+from .models import DetectionFinding, DetectorType
 
 
 class BaseDetector(ABC):
