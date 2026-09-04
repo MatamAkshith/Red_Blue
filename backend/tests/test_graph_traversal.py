@@ -1,8 +1,8 @@
 import pytest
-from app.events.schemas import AgentEvent, EventType
-from app.graph.builder import build_execution_graph
-from app.graph.models import GraphValidationError
-from app.graph.traversal import (
+from backend.app.events.schemas import AgentEvent, EventType
+from backend.app.graph.builder import build_execution_graph
+from backend.app.graph.models import GraphValidationError
+from backend.app.graph.traversal import (
     get_ancestors,
     get_descendants,
     get_execution_path,

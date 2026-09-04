@@ -1,6 +1,6 @@
 import pytest
-from app.events.schemas import AgentEvent, EventType, TrustLevel
-from app.graph import (
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.graph import (
     GraphBuildError,
     GraphValidationError,
     build_execution_graph,

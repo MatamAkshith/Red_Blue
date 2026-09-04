@@ -1,8 +1,8 @@
 import pytest
 import networkx as nx
-from app.events.schemas import AgentEvent, EventType, TrustLevel
-from app.graph.builder import build_execution_graph
-from app.detection import DetectionEngine, DetectionError, DetectorType, Severity
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.graph.builder import build_execution_graph
+from backend.app.detection import DetectionEngine, DetectionError, DetectorType, Severity
 
 
 def test_empty_and_none_graph():

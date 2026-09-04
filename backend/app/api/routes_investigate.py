@@ -14,9 +14,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.contracts.incident_analysis import IncidentAnalysis
-from app.understand.investigation.investigator import investigate
-from app.understand.investigation.schemas import Investigation
+from backend.app.contracts.incident_analysis import IncidentAnalysis
+from backend.app.understand.investigation.investigator import investigate
+from backend.app.understand.investigation.schemas import Investigation
 
 router = APIRouter(prefix="/investigate", tags=["investigate"])
 

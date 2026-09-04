@@ -1,9 +1,9 @@
 import networkx as nx
 import pytest
 
-from app.detection import DetectionEngine, DetectionError
-from app.events.schemas import AgentEvent, EventType, TrustLevel
-from app.graph import GraphBuildError, GraphValidationError, build_execution_graph, get_descendants
+from backend.app.detection import DetectionEngine, DetectionError
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.graph import GraphBuildError, GraphValidationError, build_execution_graph, get_descendants
 
 
 def event(

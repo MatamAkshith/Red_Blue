@@ -12,12 +12,12 @@ from collections.abc import Collection, Iterable
 
 import networkx as nx
 
-from app.aegis.blast_radius import Severity
-from app.aegis.models import ImpactResult
-from app.contracts.incident_analysis import BlastRadius, EvidenceItem, SensitiveResource
-from app.detection.models import DetectionFinding, DetectorType
-from app.events.schemas import AgentEvent, EventType, TrustLevel
-from app.graph.traversal import get_descendants, get_execution_path
+from backend.app.aegis.blast_radius import Severity
+from backend.app.aegis.models import ImpactResult
+from backend.app.contracts.incident_analysis import BlastRadius, EvidenceItem, SensitiveResource
+from backend.app.detection.models import DetectionFinding, DetectorType
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.graph.traversal import get_descendants, get_execution_path
 
 
 class ImpactAnalysisError(Exception):

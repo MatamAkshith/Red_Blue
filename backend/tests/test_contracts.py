@@ -1,8 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from app.aegis.blast_radius import Severity
-from app.contracts.incident_analysis import (
+from backend.app.aegis.blast_radius import Severity
+from backend.app.contracts.incident_analysis import (
     BlastRadius,
     EvidenceItem,
     IncidentAnalysis,
@@ -10,7 +10,7 @@ from app.contracts.incident_analysis import (
     PermissionFact,
     SensitiveResource,
 )
-from app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
 
 
 def make_incident() -> IncidentAnalysis:

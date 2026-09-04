@@ -14,14 +14,14 @@ from typing import Collection
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.aegis.engine import ImpactEngine
-from app.aegis.models import ImpactResult
-from app.chimera.replay import VerificationResult, replay
-from app.contracts.incident_analysis import SensitiveResource
-from app.detection import DetectionEngine, DetectionFinding
-from app.events.schemas import AgentEvent
-from app.graph import build_execution_graph
-from app.intervention.engine import InterventionDecision, select_minimum_effective
+from backend.app.aegis.engine import ImpactEngine
+from backend.app.aegis.models import ImpactResult
+from backend.app.chimera.replay import VerificationResult, replay
+from backend.app.contracts.incident_analysis import SensitiveResource
+from backend.app.detection import DetectionEngine, DetectionFinding
+from backend.app.events.schemas import AgentEvent
+from backend.app.graph import build_execution_graph
+from backend.app.intervention.engine import InterventionDecision, select_minimum_effective
 
 
 class IncidentReport(BaseModel):

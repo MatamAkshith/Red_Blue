@@ -12,12 +12,12 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from app.contracts.incident_analysis import IncidentAnalysis
-from app.core.config import Settings
-from app.main import app
-from app.understand.featherless.client import FeatherlessClient, FeatherlessError
-from app.understand.investigation.investigator import investigate
-from app.understand.investigation.schemas import Investigation
+from backend.app.contracts.incident_analysis import IncidentAnalysis
+from backend.app.core.config import Settings
+from backend.app.main import app
+from backend.app.understand.featherless.client import FeatherlessClient, FeatherlessError
+from backend.app.understand.investigation.investigator import investigate
+from backend.app.understand.investigation.schemas import Investigation
 from tests.test_contracts import make_incident
 from tests.test_featherless_client import VALID_INVESTIGATION, fake_completion
 

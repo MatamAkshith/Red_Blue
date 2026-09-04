@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.understand.investigation.schemas import (
+from backend.app.understand.investigation.schemas import (
     CriticalDecision,
     EvidenceInterpretation,
     FailurePatternCandidate,

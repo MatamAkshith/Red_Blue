@@ -1,11 +1,11 @@
 import pytest
 
-from app.aegis.blast_radius import Severity
-from app.aegis.engine import ImpactAnalysisError, ImpactEngine
-from app.contracts.incident_analysis import SensitiveResource
-from app.detection.models import DetectionFinding, DetectorType, Severity as DetectionSeverity
-from app.events.schemas import AgentEvent, EventType, TrustLevel
-from app.graph.builder import build_execution_graph
+from backend.app.aegis.blast_radius import Severity
+from backend.app.aegis.engine import ImpactAnalysisError, ImpactEngine
+from backend.app.contracts.incident_analysis import SensitiveResource
+from backend.app.detection.models import DetectionFinding, DetectorType, Severity as DetectionSeverity
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.graph.builder import build_execution_graph
 
 
 def event(

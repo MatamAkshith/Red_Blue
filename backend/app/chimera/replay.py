@@ -12,10 +12,10 @@ from typing import Collection
 import networkx as nx
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.contracts.incident_analysis import SensitiveResource
-from app.events.schemas import AgentEvent
-from app.intervention.models import Intervention
-from app.whatif.simulator import simulate
+from backend.app.contracts.incident_analysis import SensitiveResource
+from backend.app.events.schemas import AgentEvent
+from backend.app.intervention.models import Intervention
+from backend.app.whatif.simulator import simulate
 
 
 class VerificationResult(BaseModel):

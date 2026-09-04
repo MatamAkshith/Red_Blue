@@ -13,8 +13,8 @@ import pathlib
 
 import pytest
 
-from app.core.config import Settings
-from app.understand.investigation.investigator import investigate
+from backend.app.core.config import Settings
+from backend.app.understand.investigation.investigator import investigate
 from tests.test_contracts import make_incident
 
 

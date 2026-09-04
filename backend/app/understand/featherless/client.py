@@ -20,10 +20,10 @@ from typing import Any
 import openai
 from pydantic import ValidationError
 
-from app.core.config import Settings
-from app.understand.evidence.extractor import known_event_ids
-from app.understand.investigation.prompts import build_investigation_prompt
-from app.understand.investigation.schemas import Investigation
+from backend.app.core.config import Settings
+from backend.app.understand.evidence.extractor import known_event_ids
+from backend.app.understand.investigation.prompts import build_investigation_prompt
+from backend.app.understand.investigation.schemas import Investigation
 
 _DEFAULT_TIMEOUT_SECONDS = 30.0
 _JSON_FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)

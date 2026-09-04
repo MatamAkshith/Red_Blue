@@ -21,18 +21,18 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from app.aegis.blast_radius import Severity
-from app.contracts.incident_analysis import (
+from backend.app.aegis.blast_radius import Severity
+from backend.app.contracts.incident_analysis import (
     BlastRadius,
     IncidentAnalysis,
     IncidentSeverity,
     PermissionFact,
     SensitiveResource,
 )
-from app.core.config import Settings
-from app.understand.featherless.client import FeatherlessClient
-from app.understand.investigation.investigator import investigate
-from app.understand.investigation.schemas import Investigation
+from backend.app.core.config import Settings
+from backend.app.understand.featherless.client import FeatherlessClient
+from backend.app.understand.investigation.investigator import investigate
+from backend.app.understand.investigation.schemas import Investigation
 from tests.test_contracts import make_incident
 from tests.test_featherless_client import fake_completion
 

@@ -12,10 +12,10 @@ import httpx2
 import openai
 import pytest
 
-from app.contracts.incident_analysis import IncidentAnalysis
-from app.core.config import Settings
-from app.understand.featherless.client import FeatherlessClient
-from app.understand.investigation.investigator import investigate
+from backend.app.contracts.incident_analysis import IncidentAnalysis
+from backend.app.core.config import Settings
+from backend.app.understand.featherless.client import FeatherlessClient
+from backend.app.understand.investigation.investigator import investigate
 from tests.test_contracts import make_incident
 from tests.test_featherless_client import VALID_INVESTIGATION, fake_completion
 

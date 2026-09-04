@@ -7,8 +7,8 @@ from enum import Enum
 import networkx as nx
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.events.schemas import AgentEvent
-from app.graph import get_descendants
+from backend.app.events.schemas import AgentEvent
+from backend.app.graph import get_descendants
 
 
 class InterventionType(str, Enum):

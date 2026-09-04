@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.contracts.incident_analysis import IncidentAnalysis
-from app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.contracts.incident_analysis import IncidentAnalysis
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
 
 # Recognized EvidenceItem categories the extractor groups by name. Any other
 # category value P1 tags is passed through under "anomalies" rather than

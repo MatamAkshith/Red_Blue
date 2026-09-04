@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
 
 
 def test_valid_event_parses():

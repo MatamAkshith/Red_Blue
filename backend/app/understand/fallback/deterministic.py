@@ -32,7 +32,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.understand.investigation.schemas import (
+from backend.app.understand.investigation.schemas import (
     CriticalDecision,
     EvidenceInterpretation,
     Investigation,

@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import pytest
 
-from app.detection import DetectorType
-from app.graph import build_execution_graph
-from app.intervention.engine import build_candidates, select_minimum_effective
-from app.intervention.models import (
+from backend.app.detection import DetectorType
+from backend.app.graph import build_execution_graph
+from backend.app.intervention.engine import build_candidates, select_minimum_effective
+from backend.app.intervention.models import (
     InterventionType,
     apply_intervention,
     build_intervention,
 )
-from app.orchestrator import run_pipeline
-from app.scenarios import SENSITIVE_REGISTRY, build_exfiltration_events
-from app.whatif.simulator import simulate
+from backend.app.orchestrator import run_pipeline
+from backend.app.scenarios import SENSITIVE_REGISTRY, build_exfiltration_events
+from backend.app.whatif.simulator import simulate
 
 
 def _detector_types(findings) -> set[str]:

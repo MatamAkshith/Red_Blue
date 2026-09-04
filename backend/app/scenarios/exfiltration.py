@@ -9,9 +9,9 @@ schema, no new graph, no new impact model.
 
 from __future__ import annotations
 
-from app.aegis.blast_radius import Severity
-from app.contracts.incident_analysis import SensitiveResource
-from app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.aegis.blast_radius import Severity
+from backend.app.contracts.incident_analysis import SensitiveResource
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
 
 SESSION_ID = "S-DEMO-1"
 AGENT_ID = "agent-support-bot"

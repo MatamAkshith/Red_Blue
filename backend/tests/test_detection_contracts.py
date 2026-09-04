@@ -2,7 +2,7 @@ import pytest
 import networkx as nx
 from pydantic import ValidationError
 
-from app.detection import (
+from backend.app.detection import (
     BaseDetector,
     DetectionEngine,
     DetectionError,
@@ -10,8 +10,8 @@ from app.detection import (
     DetectorType,
     Severity,
 )
-from app.events.schemas import AgentEvent, EventType
-from app.graph.builder import build_execution_graph
+from backend.app.events.schemas import AgentEvent, EventType
+from backend.app.graph.builder import build_execution_graph
 
 
 class DummyDetectorA(BaseDetector):

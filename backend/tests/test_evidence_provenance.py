@@ -9,9 +9,9 @@ import json
 
 import pytest
 
-from app.core.config import Settings
-from app.understand.evidence.extractor import build_prompt_evidence, known_event_ids
-from app.understand.featherless.client import FeatherlessClient, FeatherlessError
+from backend.app.core.config import Settings
+from backend.app.understand.evidence.extractor import build_prompt_evidence, known_event_ids
+from backend.app.understand.featherless.client import FeatherlessClient, FeatherlessError
 from tests.test_contracts import make_incident
 from tests.test_featherless_client import fake_completion
 

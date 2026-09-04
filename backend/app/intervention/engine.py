@@ -13,16 +13,16 @@ from typing import Collection
 import networkx as nx
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.aegis.models import ImpactResult
-from app.contracts.incident_analysis import SensitiveResource
-from app.detection import DetectionFinding, DetectorType
-from app.events.schemas import AgentEvent
-from app.intervention.models import (
+from backend.app.aegis.models import ImpactResult
+from backend.app.contracts.incident_analysis import SensitiveResource
+from backend.app.detection import DetectionFinding, DetectorType
+from backend.app.events.schemas import AgentEvent
+from backend.app.intervention.models import (
     Intervention,
     InterventionType,
     build_intervention,
 )
-from app.whatif.simulator import SimulationResult, simulate
+from backend.app.whatif.simulator import SimulationResult, simulate
 
 
 class InterventionDecision(BaseModel):

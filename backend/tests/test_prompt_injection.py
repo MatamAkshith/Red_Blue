@@ -1,7 +1,7 @@
 import pytest
-from app.events.schemas import AgentEvent, EventType, TrustLevel
-from app.graph.builder import build_execution_graph
-from app.detection import DetectionEngine, DetectorType, PromptInjectionDetector, Severity
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.graph.builder import build_execution_graph
+from backend.app.detection import DetectionEngine, DetectorType, PromptInjectionDetector, Severity
 
 
 def test_true_positive_behavioral():

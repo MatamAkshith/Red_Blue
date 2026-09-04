@@ -1,7 +1,7 @@
 import pytest
-from app.events.schemas import AgentEvent, EventType
-from app.graph.builder import build_execution_graph
-from app.detection import DetectionEngine, DetectorType, PrivilegeViolationDetector, Severity
+from backend.app.events.schemas import AgentEvent, EventType
+from backend.app.graph.builder import build_execution_graph
+from backend.app.detection import DetectionEngine, DetectorType, PrivilegeViolationDetector, Severity
 
 
 def test_true_positive_escalation():

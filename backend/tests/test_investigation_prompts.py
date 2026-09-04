@@ -1,6 +1,6 @@
 import json
 
-from app.understand.investigation.prompts import build_investigation_prompt
+from backend.app.understand.investigation.prompts import build_investigation_prompt
 
 
 def test_prompt_has_system_and_user_messages():

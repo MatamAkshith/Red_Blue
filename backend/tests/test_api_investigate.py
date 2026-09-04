@@ -1,9 +1,9 @@
 from fastapi.testclient import TestClient
 
 import app.api.routes_investigate as routes_investigate
-from app.main import app
-from app.understand.featherless.client import FeatherlessError
-from app.understand.investigation.schemas import CriticalDecision, Investigation
+from backend.app.main import app
+from backend.app.understand.featherless.client import FeatherlessError
+from backend.app.understand.investigation.schemas import CriticalDecision, Investigation
 from tests.test_contracts import make_incident
 
 client = TestClient(app)

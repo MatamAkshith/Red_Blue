@@ -4,8 +4,8 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from app.events.schemas import AgentEvent
-from app.events.storage import EventStore
+from backend.app.events.schemas import AgentEvent
+from backend.app.events.storage import EventStore
 
 
 class EventValidationError(Exception):

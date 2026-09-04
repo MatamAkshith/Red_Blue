@@ -14,12 +14,12 @@ because the LLM is unreachable.
 
 from __future__ import annotations
 
-from app.contracts.incident_analysis import IncidentAnalysis
-from app.core.config import Settings, get_settings
-from app.understand.evidence.extractor import build_prompt_evidence
-from app.understand.fallback.deterministic import fallback_investigation
-from app.understand.featherless.client import FeatherlessClient, FeatherlessError
-from app.understand.investigation.schemas import Investigation
+from backend.app.contracts.incident_analysis import IncidentAnalysis
+from backend.app.core.config import Settings, get_settings
+from backend.app.understand.evidence.extractor import build_prompt_evidence
+from backend.app.understand.fallback.deterministic import fallback_investigation
+from backend.app.understand.featherless.client import FeatherlessClient, FeatherlessError
+from backend.app.understand.investigation.schemas import Investigation
 
 
 def investigate(

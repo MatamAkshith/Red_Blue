@@ -4,10 +4,10 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.events.collector import EventCollector, EventValidationError
-from app.events.schemas import AgentEvent
-from app.events.storage import EventStore
-from app.core.config import get_settings
+from backend.app.events.collector import EventCollector, EventValidationError
+from backend.app.events.schemas import AgentEvent
+from backend.app.events.storage import EventStore
+from backend.app.core.config import get_settings
 
 router = APIRouter(prefix="/events", tags=["events"])
 

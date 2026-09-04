@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import json
 
-from app.aegis.blast_radius import Severity
-from app.contracts.incident_analysis import (
+from backend.app.aegis.blast_radius import Severity
+from backend.app.contracts.incident_analysis import (
     BlastRadius,
     EvidenceItem,
     IncidentAnalysis,
@@ -20,11 +20,11 @@ from app.contracts.incident_analysis import (
     PermissionFact,
     SensitiveResource,
 )
-from app.core.config import Settings
-from app.events.schemas import AgentEvent, EventType, TrustLevel
-from app.understand.evidence.extractor import build_prompt_evidence, known_event_ids
-from app.understand.featherless.client import FeatherlessClient
-from app.understand.investigation.investigator import investigate
+from backend.app.core.config import Settings
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.understand.evidence.extractor import build_prompt_evidence, known_event_ids
+from backend.app.understand.featherless.client import FeatherlessClient
+from backend.app.understand.investigation.investigator import investigate
 from tests.test_featherless_client import fake_completion
 
 
@@ -203,7 +203,7 @@ def test_investigator_forwards_the_complete_rich_evidence_package(monkeypatch):
                 "confidence": 0.9, "contributing_factors": [],
                 "failure_pattern_candidate": None,
             }
-            from app.understand.investigation.schemas import Investigation
+            from backend.app.understand.investigation.schemas import Investigation
             return Investigation.model_validate(payload)
 
     client = _RecordingClient()

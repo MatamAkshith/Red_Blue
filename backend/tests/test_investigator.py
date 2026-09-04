@@ -1,7 +1,7 @@
-from app.core.config import Settings
-from app.understand.featherless.client import FeatherlessError
-from app.understand.investigation.investigator import investigate
-from app.understand.investigation.schemas import CriticalDecision, Investigation
+from backend.app.core.config import Settings
+from backend.app.understand.featherless.client import FeatherlessError
+from backend.app.understand.investigation.investigator import investigate
+from backend.app.understand.investigation.schemas import CriticalDecision, Investigation
 from tests.test_contracts import make_incident
 
 

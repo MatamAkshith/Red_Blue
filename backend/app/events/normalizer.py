@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.events.schemas import AgentEvent
+from backend.app.events.schemas import AgentEvent
 
 
 def normalize(raw: dict[str, Any]) -> AgentEvent:

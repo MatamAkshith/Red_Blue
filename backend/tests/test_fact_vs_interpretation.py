@@ -17,12 +17,12 @@ from __future__ import annotations
 
 import json
 
-from app.core.config import Settings
-from app.understand.evidence.extractor import build_prompt_evidence
-from app.understand.fallback.deterministic import fallback_investigation
-from app.understand.featherless.client import FeatherlessClient
-from app.understand.investigation.investigator import investigate
-from app.understand.investigation.schemas import Investigation
+from backend.app.core.config import Settings
+from backend.app.understand.evidence.extractor import build_prompt_evidence
+from backend.app.understand.fallback.deterministic import fallback_investigation
+from backend.app.understand.featherless.client import FeatherlessClient
+from backend.app.understand.investigation.investigator import investigate
+from backend.app.understand.investigation.schemas import Investigation
 from tests.test_contracts import make_incident
 from tests.test_featherless_client import fake_completion
 

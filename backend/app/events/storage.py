@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from app.events.schemas import AgentEvent
+from backend.app.events.schemas import AgentEvent
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS agent_events (

@@ -2,8 +2,8 @@ import sqlite3
 
 import pytest
 
-from app.events.schemas import AgentEvent, EventType
-from app.events.storage import EventStore
+from backend.app.events.schemas import AgentEvent, EventType
+from backend.app.events.storage import EventStore
 
 
 @pytest.fixture

@@ -1,9 +1,9 @@
 from pydantic import ValidationError
 import pytest
 
-from app.aegis.blast_radius import Severity
-from app.aegis.models import ImpactResult
-from app.contracts.incident_analysis import BlastRadius, EvidenceItem, SensitiveResource
+from backend.app.aegis.blast_radius import Severity
+from backend.app.aegis.models import ImpactResult
+from backend.app.contracts.incident_analysis import BlastRadius, EvidenceItem, SensitiveResource
 
 
 def test_impact_result_has_minimal_empty_impact_defaults():

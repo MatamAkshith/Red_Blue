@@ -5,8 +5,8 @@ import httpx2
 import openai
 import pytest
 
-from app.core.config import Settings
-from app.understand.featherless.client import FeatherlessClient, FeatherlessError
+from backend.app.core.config import Settings
+from backend.app.understand.featherless.client import FeatherlessClient, FeatherlessError
 
 VALID_INVESTIGATION = {
     "root_cause": "Untrusted retrieval influenced a privileged tool call",

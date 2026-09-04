@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.contracts.incident_analysis import BlastRadius, EvidenceItem, SensitiveResource
+from backend.app.contracts.incident_analysis import BlastRadius, EvidenceItem, SensitiveResource
 
 
 class ImpactResult(BaseModel):

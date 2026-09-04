@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import networkx as nx
-from app.events.schemas import AgentEvent
+from backend.app.events.schemas import AgentEvent
 from .models import GraphBuildError, GraphValidationError
 from .validation import validate_execution_graph
 

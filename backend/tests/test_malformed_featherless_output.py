@@ -11,11 +11,11 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from app.core.config import Settings
-from app.understand.evidence.extractor import build_prompt_evidence
-from app.understand.featherless.client import FeatherlessClient, FeatherlessError
-from app.understand.investigation.investigator import investigate
-from app.understand.investigation.schemas import CriticalDecision, Investigation
+from backend.app.core.config import Settings
+from backend.app.understand.evidence.extractor import build_prompt_evidence
+from backend.app.understand.featherless.client import FeatherlessClient, FeatherlessError
+from backend.app.understand.investigation.investigator import investigate
+from backend.app.understand.investigation.schemas import CriticalDecision, Investigation
 from tests.test_contracts import make_incident
 from tests.test_featherless_client import fake_completion
 

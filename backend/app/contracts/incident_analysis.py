@@ -17,8 +17,8 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.aegis.blast_radius import Severity
-from app.events.schemas import AgentEvent
+from backend.app.aegis.blast_radius import Severity
+from backend.app.events.schemas import AgentEvent
 
 
 class IncidentSeverity(str, Enum):

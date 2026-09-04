@@ -16,11 +16,11 @@ from __future__ import annotations
 
 import json
 
-from app.core.config import Settings
-from app.contracts.incident_analysis import IncidentAnalysis
-from app.understand.evidence.extractor import build_prompt_evidence
-from app.understand.investigation.investigator import investigate
-from app.understand.investigation.schemas import Investigation
+from backend.app.core.config import Settings
+from backend.app.contracts.incident_analysis import IncidentAnalysis
+from backend.app.understand.evidence.extractor import build_prompt_evidence
+from backend.app.understand.investigation.investigator import investigate
+from backend.app.understand.investigation.schemas import Investigation
 from tests.test_contracts import make_incident
 from tests.test_featherless_client import VALID_INVESTIGATION
 

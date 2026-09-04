@@ -1,4 +1,4 @@
-from app.core.config import get_settings
+from backend.app.core.config import get_settings
 
 
 def test_defaults_when_env_unset(monkeypatch):

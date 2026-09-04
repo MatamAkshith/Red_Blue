@@ -1,5 +1,5 @@
-from app.understand.evidence.extractor import build_prompt_evidence
-from app.understand.fallback.deterministic import fallback_investigation
+from backend.app.understand.evidence.extractor import build_prompt_evidence
+from backend.app.understand.fallback.deterministic import fallback_investigation
 from tests.test_contracts import make_incident
 
 

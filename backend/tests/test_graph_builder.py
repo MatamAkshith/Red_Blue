@@ -1,8 +1,8 @@
 import pytest
 import networkx as nx
-from app.events.schemas import AgentEvent, EventType, TrustLevel
-from app.graph.builder import build_execution_graph
-from app.graph.models import GraphBuildError
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.graph.builder import build_execution_graph
+from backend.app.graph.models import GraphBuildError
 
 
 def test_single_event():

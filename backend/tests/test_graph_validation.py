@@ -1,9 +1,9 @@
 import pytest
 import networkx as nx
-from app.events.schemas import AgentEvent, EventType
-from app.graph.builder import build_execution_graph
-from app.graph.models import GraphValidationError
-from app.graph.validation import validate_execution_graph
+from backend.app.events.schemas import AgentEvent, EventType
+from backend.app.graph.builder import build_execution_graph
+from backend.app.graph.models import GraphValidationError
+from backend.app.graph.validation import validate_execution_graph
 
 
 def test_valid_single_event():

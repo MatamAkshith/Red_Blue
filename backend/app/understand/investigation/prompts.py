@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from app.understand.investigation.schemas import Investigation
+from backend.app.understand.investigation.schemas import Investigation
 
 SYSTEM_PROMPT = """\
 You are the investigation/reasoning layer of BLACKBOX, a security system for \

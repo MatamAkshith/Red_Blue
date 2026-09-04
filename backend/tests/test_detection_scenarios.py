@@ -11,10 +11,10 @@ import random
 import pytest
 import networkx as nx
 
-from app.events.schemas import AgentEvent, EventType, TrustLevel
-from app.graph.builder import build_execution_graph
-from app.detection.engine import DetectionEngine
-from app.detection.models import DetectorType, Severity
+from backend.app.events.schemas import AgentEvent, EventType, TrustLevel
+from backend.app.graph.builder import build_execution_graph
+from backend.app.detection.engine import DetectionEngine
+from backend.app.detection.models import DetectorType, Severity
 
 
 def _create_event(

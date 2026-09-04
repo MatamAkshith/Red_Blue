@@ -18,9 +18,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.core.config import get_settings  # noqa: E402
-from app.understand.evidence.extractor import build_prompt_evidence  # noqa: E402
-from app.understand.featherless.client import FeatherlessClient, FeatherlessError  # noqa: E402
+from backend.app.core.config import get_settings  # noqa: E402
+from backend.app.understand.evidence.extractor import build_prompt_evidence  # noqa: E402
+from backend.app.understand.featherless.client import FeatherlessClient, FeatherlessError  # noqa: E402
 from tests.test_contracts import make_incident  # noqa: E402
 
 

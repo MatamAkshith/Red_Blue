@@ -31,7 +31,7 @@ TRUST AND TIME BOUNDARY:
 from __future__ import annotations
 
 from typing import List
-from app.events.schemas import AgentEvent
+from backend.app.events.schemas import AgentEvent
 
 # Lightweight type aliases
 GraphPath = List[str]
