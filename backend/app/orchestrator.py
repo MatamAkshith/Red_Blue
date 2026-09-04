@@ -22,6 +22,12 @@ from app.contracts.incident_analysis import IncidentAnalysis, SensitiveResource
 from app.detection import DetectionEngine, DetectionFinding
 from app.events.schemas import AgentEvent
 from app.graph import build_execution_graph
+from app.memory import (
+    FailurePatternStore,
+    PatternProvenance,
+    StoredPattern,
+    compute_signature,
+)
 from app.intervention.engine import InterventionDecision, select_minimum_effective
 from app.understand.investigation.investigator import investigate
 from app.understand.investigation.schemas import Investigation
@@ -38,6 +44,8 @@ class IncidentReport(BaseModel):
     impacts: tuple[ImpactResult, ...] = Field(default_factory=tuple)
     incident: IncidentAnalysis | None = None
     investigation: Investigation | None = None
+    pattern_signature: str = ""
+    recalled_pattern: StoredPattern | None = None
     intervention: InterventionDecision = Field(default_factory=InterventionDecision)
     verification: VerificationResult = Field(default_factory=VerificationResult)
 
@@ -48,6 +56,7 @@ def run_pipeline(
     known_sensitive_resources: Collection[SensitiveResource] = (),
     incident_id: str = "INC-1",
     explain: bool = False,
+    pattern_store: FailurePatternStore | None = None,
 ) -> IncidentReport:
     graph = build_execution_graph(events)
     findings = DetectionEngine().run(graph)
@@ -74,7 +83,29 @@ def run_pipeline(
     # P2 explains P1's facts; it never produces or overrides them.
     investigation = investigate(incident) if explain and findings else None
 
+    # Failure-pattern memory. The signature comes from P1 facts only, so
+    # recall works offline; Featherless is only needed to author a new
+    # pattern, never to match a known one.
+    signature = compute_signature(findings, impacts) if findings else ""
+    recalled: StoredPattern | None = None
+    if pattern_store is not None and signature:
+        recalled = pattern_store.recall(signature)
+        candidate = investigation.failure_pattern_candidate if investigation else None
+        if candidate is not None:
+            recalled = pattern_store.remember(
+                signature,
+                candidate,
+                PatternProvenance(
+                    incident_id=incident_id,
+                    session_id=incident.session_id,
+                    finding_ids=tuple(f.finding_id for f in findings),
+                    event_ids=tuple(e.event_id for e in events),
+                ),
+            )
+
     return IncidentReport(
+        pattern_signature=signature,
+        recalled_pattern=recalled,
         incident=incident,
         investigation=investigation,
         session_id=events[0].session_id if events else "",

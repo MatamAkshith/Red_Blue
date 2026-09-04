@@ -31,3 +31,19 @@ def analyze_incident(request: AnalyzeRequest) -> IncidentReport:
         incident_id=request.incident_id,
         explain=request.explain,
     )
+
+
+class DemoScenario(BaseModel):
+    events: list[AgentEvent]
+    known_sensitive_resources: list[SensitiveResource]
+
+
+@router.get("/demo-scenario", response_model=DemoScenario)
+def demo_scenario() -> DemoScenario:
+    """The controlled demo trace, so clients never fabricate events."""
+    from app.scenarios import SENSITIVE_REGISTRY, build_exfiltration_events
+
+    return DemoScenario(
+        events=build_exfiltration_events(),
+        known_sensitive_resources=list(SENSITIVE_REGISTRY),
+    )
