@@ -19,7 +19,7 @@ from ..aegis.models import ImpactResult
 from ..contracts.incident_analysis import EvidenceItem
 from ..detection.models import DetectionFinding
 from ..events.schemas import AgentEvent
-from .incident_adapter import AdapterValidationError
+from .exceptions import AdapterValidationError
 
 
 def assemble_evidence(

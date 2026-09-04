@@ -1,6 +1,9 @@
-"""P1 -> P2 Adapter Package."""
-
+from .exceptions import AdapterValidationError
 from .evidence_assembler import assemble_evidence
-from .incident_adapter import AdapterValidationError, build_incident_analysis
+from .incident_adapter import build_incident_analysis
 
-__all__ = ["AdapterValidationError", "build_incident_analysis", "assemble_evidence"]
+__all__ = [
+    "AdapterValidationError",
+    "assemble_evidence",
+    "build_incident_analysis",
+]

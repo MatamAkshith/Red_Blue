@@ -30,9 +30,7 @@ from ..detection.models import DetectionFinding, Severity as DetectionSeverity
 from ..events.schemas import AgentEvent
 
 
-class AdapterValidationError(Exception):
-    """Raised when adapter input contracts fail validation or graph references mismatch."""
-    pass
+from .exceptions import AdapterValidationError
 
 
 _SEVERITY_WEIGHTS: dict[str, int] = {
