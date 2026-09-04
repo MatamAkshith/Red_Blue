@@ -45,6 +45,7 @@ class DataExfiltrationDetector(BaseDetector):
                 event.metadata.get("sensitivity")
                 or event.metadata.get("sensitivity_level")
                 or event.metadata.get("classification")
+                or event.metadata.get("data_classification")
             )
             sensitivity_str = str(sensitivity).upper() if sensitivity else ""
 
@@ -65,6 +66,7 @@ class DataExfiltrationDetector(BaseDetector):
                 s_event.metadata.get("sensitivity")
                 or s_event.metadata.get("sensitivity_level")
                 or s_event.metadata.get("classification")
+                or s_event.metadata.get("data_classification")
             )
             s_sens_str = str(s_sensitivity).upper() if s_sensitivity else "HIGH"
             severity = Severity.CRITICAL if s_sens_str == "CRITICAL" else Severity.HIGH

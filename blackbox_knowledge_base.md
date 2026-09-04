@@ -219,3 +219,37 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
     4. **Primary Event ID**: `event_ids[0]` (if present).
 - **Pytest Engine Suite**: Created `backend/tests/test_detection_engine.py` with 5 tests (`test_empty_and_none_graph`, `test_clean_graph_no_attacks`, `test_single_detector_trigger`, `test_multiple_detectors_trigger`, `test_engine_determinism_multiple_runs`). Total test suite: 73 passed in 0.39s.
 
+### [Phase 1.2.6] Detection Test Suite & Final Verification
+- **Integration Scenario Matrix**: Created `backend/tests/test_detection_scenarios.py` implementing 9 end-to-end integration test suites:
+  1. `test_scenario_a_normal_rag`: Validates 0 findings for safe retrieval and response.
+  2. `test_scenario_b_prompt_injection`: Validates `INDIRECT_PROMPT_INJECTION` detection.
+  3. `test_scenario_c_tool_privilege_abuse`: Validates `PRIVILEGE_VIOLATION` detection.
+  4. `test_scenario_d_data_exfiltration`: Validates `DATA_EXFILTRATION` detection.
+  5. `test_scenario_combined_kill_chain`: Validates multi-detector attack kill chain triggering across detectors while preserving exact evidence paths.
+  6. `test_false_positives_matrix`: Validates zero false positives for authorized tool usage, internal sensitive data transfers, and benign external API calls.
+  7. `test_branching_and_multiroot_isolation`: Validates that findings isolate events to malicious branches and single session boundaries.
+  8. `test_event_order_independence`: Validates 100% output determinism regardless of input event shuffling.
+  9. `test_evidence_integrity`: Validates every finding event ID and graph path node exists in `graph.nodes`.
+- **Regression Suite Verification**: All 82 automated tests across P1.1 and P1.2 pass cleanly in 0.41s.
+- **Detector Refinement**: Added `data_classification` metadata key lookup in `DataExfiltrationDetector`.
+
+---
+
+## 10. P1.2 — Deterministic Detection Engine: DONE
+
+Phase 1.2 is officially closed, integrated, and verified.
+
+### Supported Detection Types
+1. **`INDIRECT_PROMPT_INJECTION`**: Flags untrusted context retrievals (`UNTRUSTED` / `EXTERNAL`) that flow through an agent `DECISION` node into a privileged action/tool call or contain override keywords.
+2. **`PRIVILEGE_VIOLATION` / `TOOL_ABUSE`**: Flags actions or tool calls whose required capability level exceeds the agent's declared or upstream-granted permission context based on the hierarchy `NONE (0) < READ (1) < WRITE (2) < EXECUTE (3) < EXPORT (4) < ADMIN/PRIVILEGED (5)`.
+3. **`DATA_EXFILTRATION`**: Traces directed lineage paths from sensitive data access (`HIGH` / `CRITICAL` metadata classification or sensitive keyword resource naming) to downstream external/untrusted boundary nodes.
+
+### Forensic Evidence Requirements
+- **Separation of Facts from Reasoning**: Immutable forensic evidence (`event_ids`, `evidence`, `graph_path`) is strictly separated from detector titles/descriptions for consumption by downstream Phase 2 LLM reasoning.
+- **Complete Path Preservation**: Every finding preserves the exact directed shortest path from threat origin to impact node.
+
+### Known Limitations
+- **Structural Attack Pattern MVP**: The detection engine is a deterministic rule engine operating on execution graph structure and metadata. It is NOT a universal AI anomaly detector or ML classifier.
+- **LLM Independence**: Zero LLMs, Featherless APIs, or external heuristic engines are called during detection execution. Semantic narrative synthesis and incident root-cause analysis are explicitly delegated to Phase 2.
+
+
