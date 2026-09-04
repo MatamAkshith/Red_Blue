@@ -10,10 +10,22 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from app.contracts.incident_analysis import SensitiveResource
+from app.core.config import get_settings
+from app.memory import FailurePatternStore
 from app.events.schemas import AgentEvent
 from app.orchestrator import IncidentReport, run_pipeline
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
+
+_pattern_store: FailurePatternStore | None = None
+
+
+def get_pattern_store() -> FailurePatternStore:
+    """Lazily-built process-wide pattern memory (overridable in tests)."""
+    global _pattern_store
+    if _pattern_store is None:
+        _pattern_store = FailurePatternStore(get_settings().db_path)
+    return _pattern_store
 
 
 class AnalyzeRequest(BaseModel):
@@ -30,6 +42,7 @@ def analyze_incident(request: AnalyzeRequest) -> IncidentReport:
         known_sensitive_resources=request.known_sensitive_resources,
         incident_id=request.incident_id,
         explain=request.explain,
+        pattern_store=get_pattern_store(),
     )
 
 
