@@ -127,7 +127,7 @@ def test_deterministic_serialization():
 
 
 def test_engine_registration():
-    engine = DetectionEngine()
+    engine = DetectionEngine(register_defaults=False)
     det_a = DummyDetectorA()
     det_b = DummyDetectorB()
 
@@ -140,7 +140,7 @@ def test_engine_registration():
 
 
 def test_empty_and_invalid_graph_handling():
-    engine = DetectionEngine()
+    engine = DetectionEngine(register_defaults=False)
     engine.register_detector(DummyDetectorA())
 
     # None graph raises DetectionError
@@ -153,7 +153,7 @@ def test_empty_and_invalid_graph_handling():
 
 
 def test_output_determinism_and_severity_sorting():
-    engine = DetectionEngine()
+    engine = DetectionEngine(register_defaults=False)
     # Register detectors in arbitrary order (DetectorA is HIGH severity find_002, DetectorB is CRITICAL severity find_001)
     engine.register_detector(DummyDetectorA())
     engine.register_detector(DummyDetectorB())

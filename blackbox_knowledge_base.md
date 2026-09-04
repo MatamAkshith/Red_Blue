@@ -204,3 +204,18 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
   - **Finding Construction**: Emits `DetectionFinding` with `confidence=1.0`, severity mapped to resource sensitivity (`CRITICAL` vs `HIGH`), complete `graph_path`, and detailed `evidence` dictionary.
 - **Pytest Detector Suite**: Created `backend/tests/test_data_exfiltration.py` covering True Positives (exfil path), True Negatives (public data), True Negatives (internal move), True Negatives (disconnected branches), and multi-run Determinism (5 test functions, 68 total suite tests passing in 0.38s).
 - **Knowledge Base Update**: Documented Task P1.2.4 completion and rule definition in `Implementation Changelog`.
+
+### [Phase 1.2.5] Detection Engine Integration & Orchestration
+- **Engine Orchestrator**: Updated `backend/app/detection/engine.py` to automatically register `PromptInjectionDetector`, `PrivilegeViolationDetector`, and `DataExfiltrationDetector` by default using strict relative imports.
+- **Input & Error Contracts**:
+  - `graph is None` raises `DetectionError("Execution graph cannot be None")`.
+  - `len(graph.nodes) == 0` returns `[]`.
+- **Deterministic Multi-Detector Aggregation & Sorting**:
+  - Aggregates findings across all registered detectors.
+  - Sorts final findings deterministically using a multi-key tuple:
+    1. **Severity Priority**: `CRITICAL` (0) > `HIGH` (1) > `MEDIUM` (2) > `LOW` (3).
+    2. **Detector Type**: `detector_type.value` lexicographically.
+    3. **Finding ID**: `finding_id` lexicographically.
+    4. **Primary Event ID**: `event_ids[0]` (if present).
+- **Pytest Engine Suite**: Created `backend/tests/test_detection_engine.py` with 5 tests (`test_empty_and_none_graph`, `test_clean_graph_no_attacks`, `test_single_detector_trigger`, `test_multiple_detectors_trigger`, `test_engine_determinism_multiple_runs`). Total test suite: 73 passed in 0.39s.
+

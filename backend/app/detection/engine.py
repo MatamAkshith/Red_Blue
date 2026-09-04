@@ -1,10 +1,13 @@
-"""Detection engine orchestrator."""
+"""Unified deterministic detection engine orchestrator."""
 
 from __future__ import annotations
 
 from typing import Dict, List
 import networkx as nx
 
+from .detectors.data_exfiltration import DataExfiltrationDetector
+from .detectors.privilege_violation import PrivilegeViolationDetector
+from .detectors.prompt_injection import PromptInjectionDetector
 from .interfaces import BaseDetector
 from .models import DetectionError, DetectionFinding, Severity
 
@@ -17,10 +20,14 @@ SEVERITY_PRIORITY: Dict[str, int] = {
 
 
 class DetectionEngine:
-    """Orchestrator for executing registered deterministic detectors over an Execution Graph."""
+    """Unified orchestrator for executing registered deterministic detectors over an Execution Graph."""
 
-    def __init__(self) -> None:
+    def __init__(self, register_defaults: bool = True) -> None:
         self._detectors: List[BaseDetector] = []
+        if register_defaults:
+            self.register_detector(PromptInjectionDetector())
+            self.register_detector(PrivilegeViolationDetector())
+            self.register_detector(DataExfiltrationDetector())
 
     @property
     def detectors(self) -> List[BaseDetector]:
@@ -35,6 +42,12 @@ class DetectionEngine:
         """
         if not isinstance(detector, BaseDetector):
             raise DetectionError(f"Detector must inherit from BaseDetector, got {type(detector)}")
+        
+        # Deduplicate detectors of the same type/class
+        for existing in self._detectors:
+            if existing.__class__ == detector.__class__:
+                return
+
         self._detectors.append(detector)
 
     def run(self, graph: nx.DiGraph) -> List[DetectionFinding]:
@@ -44,7 +57,7 @@ class DetectionEngine:
             graph: The NetworkX directed execution graph.
 
         Returns:
-            List[DetectionFinding]: Stably sorted list of findings across all detectors.
+            List[DetectionFinding]: Deterministically sorted list of findings across all detectors.
 
         Raises:
             DetectionError: If graph is None or invalid.
@@ -69,12 +82,17 @@ class DetectionEngine:
                     raise
                 raise DetectionError(f"Detector '{detector.__class__.__name__}' failed: {exc}") from exc
 
-        # Stable, deterministic sorting: Priority by Severity (descending), then by finding_id, then by primary event_id
+        # Stable, deterministic sorting rule:
+        # 1. Severity priority (CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3)
+        # 2. detector_type string value
+        # 3. finding_id
+        # 4. primary event_id
         def sort_key(finding: DetectionFinding) -> tuple:
             sev_str = finding.severity.value if hasattr(finding.severity, "value") else str(finding.severity)
+            det_type_str = finding.detector_type.value if hasattr(finding.detector_type, "value") else str(finding.detector_type)
             priority = SEVERITY_PRIORITY.get(sev_str, 99)
             primary_event = finding.event_ids[0] if finding.event_ids else ""
-            return (priority, finding.finding_id, primary_event)
+            return (priority, det_type_str, finding.finding_id, primary_event)
 
         all_findings.sort(key=sort_key)
         return all_findings
