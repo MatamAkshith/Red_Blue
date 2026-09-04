@@ -270,6 +270,13 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
 - **Scenario Determinism**: Updated `backend/app/scenarios/exfiltration.py` base timestamp to ensure 100% trace determinism across repeated runs.
 - **Pytest Suite**: Created `backend/tests/test_pipeline_orchestrator.py` with 3 end-to-end integration tests (`test_orchestrator_end_to_end_success`, `test_p1_fact_preservation`, `test_featherless_fallback_graceful_degradation`). 270 total tests passing.
 
+### [Phase 1.4.5] Full Vertical Slice Integration & Validation
+- **End-to-End Kill Chain Test**: Created `backend/tests/test_p1_p2_vertical_slice.py` validating the full P1 → P2 pipeline end-to-end (`Events → Graph → Detection Engine → AEGIS Impact → Adapter → Investigation / Fallback → IncidentReport`).
+- **AI Happy Path Assertion**: Validates that when Featherless investigation succeeds, the report correctly incorporates AI reasoning while preserving deterministic P1 facts (`INDIRECT_PROMPT_INJECTION` & `DATA_EXFILTRATION` findings, exact attack path `[e1, e2, e3, e4]`, sensitive resource `customer_pii`, and `CRITICAL` severity).
+- **Featherless Down Fallback Assertion**: Validates that when Featherless API raises `FeatherlessError`, the orchestrator gracefully degrades to deterministic fallback without crashing, producing hard facts (attack path, event IDs, severity, blast radius, findings) 100% identical to the happy path.
+- **Regression Suite Pass**: 272 automated unit and integration tests passing in <3.0s.
+
+
 
 
 ---
