@@ -123,6 +123,18 @@ The Universal AgentEvent represents a normalized, framework-agnostic execution s
 
 ---
 
+## 8. P1.1 — Execution Graph Foundation: DONE
+
+Phase 1.1 is officially closed and verified.
+
+- **AgentEvent Contract Compliance**: The graph builder consumes `app.events.schemas.AgentEvent` directly from P3.
+- **P1 ↔ P3 Boundary Integrity**: P1 does NOT own event ingestion or storage. `backend/app/graph/` contains zero database/SQLAlchemy/SQLite dependencies and zero HTTP/FastAPI coupling.
+- **Determinism & Forensic Validation**: Guaranteed by explicit list sorting across all traversal functions and strict 7-point structural verification in `validate_execution_graph`.
+- **Scope Compliance**: Zero security detection, LLMs, risk scores, or future Phase 1.2+ scope leaked into P1.1.
+- **Test Coverage**: 47 total automated unit and integration tests passing in `<0.4s`.
+
+---
+
 ## Implementation Changelog
 
 ### [Phase 1.1 - Task 1] Workspace Setup & Repository Contract Inspection
@@ -171,3 +183,18 @@ The Universal AgentEvent represents a normalized, framework-agnostic execution s
   7. **No Unexpected Edges**: Verifies all directed edges `u -> v` are justified by `v`'s `parent_event_id == u`.
 - **Pytest Unit Tests**: Created `backend/tests/test_graph_validation.py` covering 10 scenarios (valid single, linear, branching, multi-root, missing node, unexpected node, missing parent edge, unexpected edge, cycle, and identity mismatch).
 - **Knowledge Base Update**: Documented Task 5 completion in `Implementation Changelog`.
+
+### [Phase 1.1 - Tasks 6 & 7] Integration Test Suite & Final Boundary Audit
+- **End-to-End Integration Tests**: Created `backend/tests/test_graph_integration.py` testing the full `events -> build_execution_graph -> validate_execution_graph -> traversal` pipeline across 6 scenarios:
+  1. Linear pipeline (A $\rightarrow$ B $\rightarrow$ C validation and path extraction)
+  2. Branching pipeline (A $\rightarrow$ B, A $\rightarrow$ C validation and descendant extraction)
+  3. Multi-root pipeline (A $\rightarrow$ B, C $\rightarrow$ D tree isolation validation)
+  4. End-to-end event payload preservation verification
+  5. Deterministic ordering under scrambled input order (`[D, C, A, B]`)
+  6. End-to-end builder and validator rejection handling
+- **Architectural Boundary Audit**:
+  - **Dependency Audit**: Verified `networkx` is the only external dependency. Zero graph DBs, Redis, or Kafka added.
+  - **Storage Isolation Audit**: Verified zero imports of `sqlite3`, `sqlalchemy`, or database models in `backend/app/graph/`.
+  - **HTTP Isolation Audit**: Verified zero imports of `fastapi`, `starlette`, routing, or HTTP exceptions in `backend/app/graph/`.
+- **Final Test Verification**: All 47 suite tests passed in 0.37s.
+- **Phase Closure**: Appended Section 8 closing Phase 1.1 in `blackbox_knowledge_base.md`.
