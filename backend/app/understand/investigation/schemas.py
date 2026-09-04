@@ -43,6 +43,10 @@ class Investigation(BaseModel):
     attack_narrative: str
     critical_decision: CriticalDecision
     evidence_interpretation: list[EvidenceInterpretation] = Field(default_factory=list)
-    confidence: float
+    # Bounded so a malformed/hallucinating response (e.g. confidence=150)
+    # is rejected by schema validation -- caught as a FeatherlessError and
+    # routed to the deterministic fallback -- rather than silently accepted
+    # as a plausible-looking result.
+    confidence: float = Field(ge=0.0, le=1.0)
     contributing_factors: list[str] = Field(default_factory=list)
     failure_pattern_candidate: FailurePatternCandidate | None = None

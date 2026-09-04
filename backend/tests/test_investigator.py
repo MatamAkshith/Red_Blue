@@ -53,7 +53,7 @@ def test_investigate_falls_back_on_featherless_error():
     result = investigate(incident, settings=make_settings(), client=fake)
 
     assert result.confidence == 0.0
-    assert "AI explanation unavailable" in result.root_cause
+    assert "AI EXPLANATION:\nUnavailable" in result.root_cause
 
 
 def test_investigate_falls_back_when_no_api_key_configured():
@@ -62,4 +62,4 @@ def test_investigate_falls_back_when_no_api_key_configured():
     result = investigate(incident, settings=make_settings(api_key=None))
 
     assert result.confidence == 0.0
-    assert "AI explanation unavailable" in result.root_cause
+    assert "AI EXPLANATION:\nUnavailable" in result.root_cause

@@ -16,8 +16,47 @@ def test_system_prompt_carries_philosophy_and_rules():
 
     assert "We don't secure the model" in system
     assert "Technology changes. Failure patterns persist." in system
-    assert "Never invent events" in system
     assert "Insufficient evidence" in system
+
+
+def test_system_prompt_lists_required_behaviors():
+    system = build_investigation_prompt({})[0]["content"]
+
+    for required in (
+        "Use only the supplied evidence",
+        "WHY the incident occurred",
+        "Reconstruct the attack chain",
+        "critical agent decision",
+        "relate to each other",
+        "event_id(s) that support each conclusion",
+        "Distinguish facts",
+    ):
+        assert required in system
+
+
+def test_system_prompt_forbids_inventing_every_listed_category():
+    system = build_investigation_prompt({})[0]["content"]
+
+    for forbidden in (
+        "events",
+        "event IDs",
+        "tools",
+        "permissions",
+        "resources",
+        "timestamps",
+        "agents",
+        "attack paths",
+    ):
+        assert forbidden in system
+
+
+def test_system_prompt_forbids_modifying_p1_findings():
+    system = build_investigation_prompt({})[0]["content"]
+
+    assert "severity" in system
+    assert "blast_radius" in system
+    assert "not yours to change" in system
+    assert "does not appear in the supplied evidence" in system
 
 
 def test_user_prompt_embeds_the_evidence_as_json():

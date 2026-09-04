@@ -39,6 +39,18 @@ def test_missing_api_key_raises():
         FeatherlessClient(make_settings(api_key=None))
 
 
+def evidence_with_real_ids() -> dict:
+    # VALID_INVESTIGATION references E15 (critical_decision) and E14
+    # (evidence_interpretation) -- this evidence package must actually
+    # contain both, or provenance validation will (correctly) reject it.
+    return {
+        "incident_id": "INC-1",
+        "attack_path": ["E14", "E15"],
+        "important_decisions": [{"event_id": "E15"}],
+        "trust_boundary_crossings": [{"event_id": "E14"}],
+    }
+
+
 def test_successful_analyze_parses_and_validates(monkeypatch):
     client = FeatherlessClient(make_settings())
     monkeypatch.setattr(
@@ -47,7 +59,7 @@ def test_successful_analyze_parses_and_validates(monkeypatch):
         lambda **kwargs: fake_completion(json.dumps(VALID_INVESTIGATION)),
     )
 
-    result = client.analyze({"incident_id": "INC-1"})
+    result = client.analyze(evidence_with_real_ids())
     assert result.root_cause.startswith("Untrusted retrieval")
     assert result.critical_decision.event_id == "E15"
 
@@ -59,7 +71,7 @@ def test_markdown_fenced_json_is_still_parsed(monkeypatch):
         client._client.chat.completions, "create", lambda **kwargs: fake_completion(fenced)
     )
 
-    result = client.analyze({})
+    result = client.analyze(evidence_with_real_ids())
     assert result.confidence == 0.9
 
 

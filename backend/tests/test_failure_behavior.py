@@ -55,7 +55,7 @@ def test_b_featherless_unavailable_fallback_succeeds():
 
     assert isinstance(result, Investigation)
     assert result.confidence == 0.0
-    assert "AI explanation unavailable" in result.root_cause
+    assert "AI EXPLANATION:\nUnavailable" in result.root_cause
 
 
 # C. Invalid/malformed incident -> validation failure is returned cleanly.
@@ -114,7 +114,7 @@ def test_d_malformed_output_falls_back_instead_of_propagating_bad_data():
 # LLM output cannot modify deterministic security facts.
 def test_llm_output_cannot_modify_deterministic_facts():
     incident = make_incident()
-    original_attack_path = list(incident.attack_path)
+    original_attack_path = incident.attack_path  # frozen tuple -- safe to alias, not copy
     original_risk_score = incident.blast_radius.risk_score
     original_sensitive = [r.resource for r in incident.sensitive_resources]
 
