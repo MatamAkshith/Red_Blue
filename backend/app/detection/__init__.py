@@ -1,4 +1,8 @@
-from .detectors import PrivilegeViolationDetector, PromptInjectionDetector
+from .detectors import (
+    DataExfiltrationDetector,
+    PrivilegeViolationDetector,
+    PromptInjectionDetector,
+)
 from .engine import DetectionEngine
 from .interfaces import BaseDetector
 from .models import (
@@ -11,6 +15,7 @@ from .models import (
 
 __all__ = [
     "BaseDetector",
+    "DataExfiltrationDetector",
     "DetectionContractError",
     "DetectionEngine",
     "DetectionError",

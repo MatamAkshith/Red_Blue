@@ -164,23 +164,18 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
 
 ### [Phase 1.1 - Task 3] Implement Execution Graph Builder
 - **Graph Builder**: Implemented `build_execution_graph(events: list[AgentEvent]) -> nx.DiGraph` in `backend/app/graph/builder.py`.
-- **Two-Pass Construction**:
-  - Pass 1 adds nodes (`graph.add_node(event.event_id, event=event)`) and raises `GraphBuildError` on duplicate `event_id` values.
-  - Pass 2 adds edges (`graph.add_edge(event.parent_event_id, event.event_id)`) and raises `GraphBuildError` if `parent_event_id` does not exist in the graph.
-- **Guarantees**: Ensures input order independence, supports multiple roots and branching traces, prevents placeholder parent node generation, and preserves intact `AgentEvent` objects on nodes.
-- **Pytest Unit Tests**: Created `backend/tests/test_graph_builder.py` covering single events, linear traces, branching, multiple roots, event model preservation, duplicate ID rejection, missing parent rejection, and input order independence.
-- **Knowledge Base Update**: Documented Task 3 completion and architectural guarantees in `Implementation Changelog`.
+- **Two-Pass Construction**: Pass 1 adds nodes with uniqueness checks; Pass 2 connects directed edges with parent existence checks.
+- **Guarantees**: Ensures input order independence, supports multiple roots and branching traces, and preserves intact `AgentEvent` objects on nodes.
+- **Pytest Unit Tests**: Created `backend/tests/test_graph_builder.py`.
 
 ### [Phase 1.1 - Task 4] Implement Deterministic Graph Traversal
 - **Traversal Utilities**: Implemented structural graph navigation functions in `backend/app/graph/traversal.py`.
 - **Determinism & Validation Guarantees**: Explicitly sorts all returned sets of event IDs alphabetically to eliminate non-deterministic set ordering. Validates node presence prior to traversal.
 - **Pytest Unit Tests**: Created `backend/tests/test_graph_traversal.py`.
-- **Knowledge Base Update**: Documented Task 4 completion in `Implementation Changelog`.
 
 ### [Phase 1.1 - Task 5] Implement Forensic Graph Validation & Integrity
 - **Validation Module**: Created `backend/app/graph/validation.py` implementing `validate_execution_graph(events: list[AgentEvent], graph: nx.DiGraph) -> bool`.
-- **Pytest Unit Tests**: Created `backend/tests/test_graph_validation.py` covering 10 scenarios.
-- **Knowledge Base Update**: Documented Task 5 completion in `Implementation Changelog`.
+- **Pytest Unit Tests**: Created `backend/tests/test_graph_validation.py`.
 
 ### [Phase 1.1 - Tasks 6 & 7] Integration Test Suite & Final Boundary Audit
 - **End-to-End Integration Tests**: Created `backend/tests/test_graph_integration.py`.
@@ -190,21 +185,22 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
 ### [Phase 1.2.1] Define Detection Engine Architecture & Contracts
 - **Detection Models & Enums**: Created `backend/app/detection/models.py` defining `DetectorType`, `Severity`, `DetectionFinding`, `DetectionError`, and `DetectionContractError`.
 - **Interfaces & Engine**: Created `backend/app/detection/interfaces.py` (`BaseDetector`) and `backend/app/detection/engine.py` (`DetectionEngine`).
-- **Pytest Contract Suite**: Created `backend/tests/test_detection_contracts.py` (6 tests passing).
+- **Pytest Contract Suite**: Created `backend/tests/test_detection_contracts.py`.
 
 ### [Phase 1.2.2] Implement Indirect Prompt Injection Detector
 - **Prompt Injection Detector**: Created `backend/app/detection/detectors/prompt_injection.py` implementing `PromptInjectionDetector(BaseDetector)`.
-- **Pytest Detector Suite**: Created `backend/tests/test_prompt_injection.py` (5 tests passing).
+- **Pytest Detector Suite**: Created `backend/tests/test_prompt_injection.py`.
 
 ### [Phase 1.2.3] Implement Tool Abuse & Privilege Violation Detector
 - **Privilege Detector**: Created `backend/app/detection/detectors/privilege_violation.py` implementing `PrivilegeViolationDetector(BaseDetector)`.
-- **Deterministic Permission Hierarchy**:
-  - `NONE: 0 < READ: 1 < WRITE: 2 < EXECUTE: 3 < EXPORT: 4 < ADMIN: 5` (and `PRIVILEGED: 5`).
-- **Detection Logic**:
-  - Scans `TOOL_CALL` and `ACTION` nodes in `nx.DiGraph`.
-  - Determines declared/granted permission context from node metadata/attributes or upstream ancestor events.
-  - Determines required permission capability from action/tool type (e.g. `write`, `execute`, `delete`, `admin`, `export`).
-  - Flags finding if `required_level > granted_level`.
-  - Severity mapping: gap=1 $\rightarrow$ `MEDIUM`, gap=2 $\rightarrow$ `HIGH`, gap$\ge 3$ $\rightarrow$ `CRITICAL`.
-- **Pytest Detector Suite**: Created `backend/tests/test_privilege_violation.py` covering True Positives (escalation), True Negatives (authorized write), True Negatives (low privilege read), Branching Isolation, and multi-run Determinism (5 test functions, 63 total suite tests passing in 0.35s).
-- **Knowledge Base Update**: Documented Task P1.2.3 completion and rule definition in `Implementation Changelog`.
+- **Pytest Detector Suite**: Created `backend/tests/test_privilege_violation.py`.
+
+### [Phase 1.2.4] Implement Data Exfiltration Detector
+- **Data Exfiltration Detector**: Created `backend/app/detection/detectors/data_exfiltration.py` implementing `DataExfiltrationDetector(BaseDetector)`.
+- **Deterministic Lineage Rule**:
+  - **Sensitive Data Access**: Identifies `DATA_ACCESS`/`RETRIEVAL` nodes with metadata classification `HIGH`/`CRITICAL` or sensitive resource naming (`"sensitive"`, `"critical"`, `"pii"`, `"secret"`, `"credentials"`, `"financial"`). Ignores `LOW`/`PUBLIC` data.
+  - **Downstream Lineage Traversal**: Uses `nx.descendants(graph, s_node)` and `nx.has_path(graph, s_node, d_node)` to trace directed paths to downstream `ACTION`/`TOOL_CALL`/`EXTERNAL_REQUEST` boundary nodes.
+  - **Exfiltration Boundary Trigger**: Flags finding if the downstream target is `UNTRUSTED`/`EXTERNAL` (or HTTP endpoint/`export` action).
+  - **Finding Construction**: Emits `DetectionFinding` with `confidence=1.0`, severity mapped to resource sensitivity (`CRITICAL` vs `HIGH`), complete `graph_path`, and detailed `evidence` dictionary.
+- **Pytest Detector Suite**: Created `backend/tests/test_data_exfiltration.py` covering True Positives (exfil path), True Negatives (public data), True Negatives (internal move), True Negatives (disconnected branches), and multi-run Determinism (5 test functions, 68 total suite tests passing in 0.38s).
+- **Knowledge Base Update**: Documented Task P1.2.4 completion and rule definition in `Implementation Changelog`.
