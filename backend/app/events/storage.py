@@ -7,10 +7,11 @@ from backend.app.events.schemas import AgentEvent
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS agent_events (
-    event_id TEXT PRIMARY KEY,
+    event_id TEXT NOT NULL,
     session_id TEXT NOT NULL,
     payload TEXT NOT NULL,
-    timestamp TEXT NOT NULL
+    timestamp TEXT NOT NULL,
+    PRIMARY KEY (event_id, session_id)
 );
 CREATE INDEX IF NOT EXISTS idx_agent_events_session ON agent_events(session_id);
 """
@@ -53,3 +54,24 @@ class EventStore:
                 (session_id,),
             ).fetchall()
         return [AgentEvent.model_validate_json(row[0]) for row in rows]
+
+    def get_sessions(self, limit: int = 10) -> list[dict[str, Any]]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT session_id, COUNT(*) as event_count, MAX(timestamp) as last_seen
+                FROM agent_events
+                GROUP BY session_id
+                ORDER BY rowid DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [
+            {
+                "session_id": row[0],
+                "event_count": row[1],
+                "last_seen": row[2],
+            }
+            for row in rows
+        ]

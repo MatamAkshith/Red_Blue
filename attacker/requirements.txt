@@ -1,0 +1,4 @@
+# BLACKBOX Synthetic Attack Simulator Requirements
+# Built using Python 3 Standard Library for zero-dependency portability.
+# Optional: python-dotenv for loading .env files automatically.
+python-dotenv>=1.0.0

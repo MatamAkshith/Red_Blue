@@ -32,3 +32,6 @@ class EventCollector:
 
     def get_session(self, session_id: str) -> list[AgentEvent]:
         return self._store.get_by_session(session_id)
+
+    def get_sessions(self, limit: int = 10) -> list[dict[str, Any]]:
+        return self._store.get_sessions(limit=limit)

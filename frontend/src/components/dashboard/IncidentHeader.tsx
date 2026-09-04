@@ -8,34 +8,56 @@ interface IncidentHeaderProps {
   sessionId?: string;
   severity?: string;
   status?: string;
+  threatVector?: string;
+  isPolling?: boolean;
   onSimulateClick?: () => void;
   onExportClick?: () => void;
+  onRunLiveDemo?: (scenario: "malicious" | "benign") => void;
 }
 
 export const IncidentHeader: React.FC<IncidentHeaderProps> = ({
-  incidentId = "INC-DEMO-1",
-  agentId = "agent-support-bot",
-  sessionId = "S-DEMO-1",
+  incidentId = "INC-ACTIVE",
+  agentId = "agent-email-processor",
+  sessionId = "S-LIVE-ACTIVE",
   severity = "CRITICAL",
   status = "ACTIVE THREAT",
+  threatVector = "INDIRECT PROMPT INJECTION",
+  isPolling = false,
   onSimulateClick,
   onExportClick,
+  onRunLiveDemo,
 }) => {
   return (
     <div className="bg-white border border-slate-200 rounded-sm p-4 shadow-2xs space-y-4">
       {/* Top Title & Action Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-        <div className="flex items-center space-x-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-lg font-bold font-mono tracking-tight text-slate-900">
             INCIDENT / {incidentId}
           </h2>
           <div className="flex items-center space-x-2">
             <Badge variant="critical">🔴 {severity}</Badge>
             <Badge variant="outline-critical">{status}</Badge>
+            {isPolling && (
+              <Badge variant="success">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1.5 inline-block" />
+                LIVE POLLING (1s)
+              </Badge>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {onRunLiveDemo && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => onRunLiveDemo("malicious")}>
+                ⚡ Run Malicious
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => onRunLiveDemo("benign")}>
+                🌱 Run Benign
+              </Button>
+            </>
+          )}
           <Button variant="outline" size="sm" onClick={onExportClick}>
             📄 Export Report
           </Button>
@@ -69,8 +91,8 @@ export const IncidentHeader: React.FC<IncidentHeaderProps> = ({
           <span className="text-slate-500 block text-xs uppercase font-bold tracking-wider mb-0.5">
             Primary Threat Vector
           </span>
-          <span className="font-bold text-red-700 text-xs">
-            INDIRECT PROMPT INJECTION
+          <span className="font-bold text-red-700 text-xs uppercase">
+            {threatVector}
           </span>
         </div>
       </div>

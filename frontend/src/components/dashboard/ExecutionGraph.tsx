@@ -121,6 +121,8 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
     DEFAULT_MOCK_NODES.E3
   );
 
+  const hasEventsProp = events !== undefined && events !== null;
+
   // Convert real events array to node map if available
   const nodeMap: Record<string, ExecutionNodeData> = {};
   if (events && events.length > 0) {
@@ -166,12 +168,12 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
         rawEvent: ev,
       };
     });
-  } else {
+  } else if (!hasEventsProp) {
     Object.assign(nodeMap, DEFAULT_MOCK_NODES);
   }
 
   const activeSelectedId =
-    selectedEvent?.event_id ?? internalSelected?.id ?? "E3";
+    selectedEvent?.event_id ?? internalSelected?.id ?? "E1";
 
   const handleCardClick = (node: ExecutionNodeData) => {
     setInternalSelected(node);
@@ -227,7 +229,7 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
   };
 
   const renderNodeCard = (nodeKey: string) => {
-    const node = nodeMap[nodeKey] || DEFAULT_MOCK_NODES[nodeKey];
+    const node = nodeMap[nodeKey] || (!hasEventsProp ? DEFAULT_MOCK_NODES[nodeKey] : null);
     if (!node) return null;
 
     const isSelected = activeSelectedId === node.id;
@@ -336,78 +338,90 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
             </defs>
 
             {/* Line E1 -> E2 (Untrusted Data Flow Edge) */}
-            <line
-              x1="228"
-              y1="85"
-              x2="260"
-              y2="85"
-              stroke="#f59e0b"
-              strokeWidth="3.5"
-              strokeDasharray="5 3"
-              markerEnd="url(#arrow-amber)"
-              className="transition-all duration-200"
-            />
+            {(nodeMap.E1 || !hasEventsProp) && (nodeMap.E2 || !hasEventsProp) && (
+              <line
+                x1="228"
+                y1="85"
+                x2="260"
+                y2="85"
+                stroke="#f59e0b"
+                strokeWidth="3.5"
+                strokeDasharray="5 3"
+                markerEnd="url(#arrow-amber)"
+                className="transition-all duration-200"
+              />
+            )}
 
             {/* Line E2 -> E3 (Bold Attack Path Edge) */}
-            <line
-              x1="452"
-              y1="85"
-              x2="504"
-              y2="85"
-              stroke="#dc2626"
-              strokeWidth="3.5"
-              markerEnd="url(#arrow-red)"
-              className="transition-all duration-200"
-            />
+            {(nodeMap.E2 || !hasEventsProp) && (nodeMap.E3 || !hasEventsProp) && (
+              <line
+                x1="452"
+                y1="85"
+                x2="504"
+                y2="85"
+                stroke="#dc2626"
+                strokeWidth="3.5"
+                markerEnd="url(#arrow-red)"
+                className="transition-all duration-200"
+              />
+            )}
 
             {/* Branch Line E3 -> E4 (Benign downward branch) */}
-            <line
-              x1="600"
-              y1="145"
-              x2="600"
-              y2="205"
-              stroke="#10b981"
-              strokeWidth="2.5"
-              strokeDasharray="4 3"
-              markerEnd="url(#arrow-green)"
-              className="transition-all duration-200"
-            />
+            {(nodeMap.E3 || !hasEventsProp) && (nodeMap.E4 || !hasEventsProp) && (
+              <line
+                x1="600"
+                y1="145"
+                x2="600"
+                y2="205"
+                stroke="#10b981"
+                strokeWidth="2.5"
+                strokeDasharray="4 3"
+                markerEnd="url(#arrow-green)"
+                className="transition-all duration-200"
+              />
+            )}
 
             {/* Line E3 -> E5 (Attack Causal Edge) */}
-            <line
-              x1="696"
-              y1="85"
-              x2="748"
-              y2="85"
-              stroke="#dc2626"
-              strokeWidth="3.5"
-              markerEnd="url(#arrow-red)"
-              className="transition-all duration-200"
-            />
+            {(nodeMap.E3 || !hasEventsProp) && (nodeMap.E5 || !hasEventsProp) && (
+              <line
+                x1="696"
+                y1="85"
+                x2="748"
+                y2="85"
+                stroke="#dc2626"
+                strokeWidth="3.5"
+                markerEnd="url(#arrow-red)"
+                className="transition-all duration-200"
+              />
+            )}
 
             {/* Line E5 -> E6 (Downstream Impact Edge) */}
-            <line
-              x1="940"
-              y1="85"
-              x2="980"
-              y2="85"
-              stroke="#dc2626"
-              strokeWidth="3.5"
-              markerEnd="url(#arrow-red)"
-              className="transition-all duration-200"
-            />
+            {(nodeMap.E5 || !hasEventsProp) && (nodeMap.E6 || !hasEventsProp) && (
+              <line
+                x1="940"
+                y1="85"
+                x2="980"
+                y2="85"
+                stroke="#dc2626"
+                strokeWidth="3.5"
+                markerEnd="url(#arrow-red)"
+                className="transition-all duration-200"
+              />
+            )}
 
             {/* Line E6 -> E7 (Exfiltration Edge) */}
-            <line
-              x1="1172"
-              y1="85"
-              x2="1212"
-              y2="85"
-              stroke="#dc2626"
-              strokeWidth="3.5"
-              markerEnd="url(#arrow-red)"
-              className="transition-all duration-200"
-            />
+            {(nodeMap.E6 || !hasEventsProp) && (nodeMap.E7 || !hasEventsProp) && (
+              <line
+                x1="1172"
+                y1="85"
+                x2="1212"
+                y2="85"
+                stroke="#dc2626"
+                strokeWidth="3.5"
+                markerEnd="url(#arrow-red)"
+                className="transition-all duration-200"
+              />
+            )}
           </svg>
 
           {/* Node Container Layout */}

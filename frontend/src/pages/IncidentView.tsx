@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type {
   AgentEvent,
   IncidentResponse,
@@ -8,7 +8,10 @@ import {
   analyzeIncident,
   defendIncident,
   fetchDemoScenario,
+  fetchEvents,
+  fetchSessions,
   simulateIntervention,
+  triggerTargetDemo,
 } from "../api";
 import { AnalysisPanels } from "../components/dashboard/AnalysisPanels";
 import { EventInspectorDrawer } from "../components/dashboard/EventInspectorDrawer";
@@ -69,6 +72,111 @@ export const IncidentView: React.FC = () => {
   const [, setKnownResources] = useState<SensitiveResource[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<AgentEvent | null>(null);
 
+  // Live session & polling state
+  const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
+  const liveSessionIdRef = useRef<string | null>(null);
+  const [pollingIntervalMs] = useState<number>(1000);
+
+  // Automatic Session Discovery Polling Effect (Discovers new S-LIVE-* sessions triggered externally)
+  useEffect(() => {
+    let isCancelled = false;
+
+    const checkNewSessions = async () => {
+      try {
+        const sessions = await fetchSessions(5);
+        if (isCancelled || sessions.length === 0) return;
+
+        const latestSession = sessions[0];
+        if (latestSession && latestSession.session_id !== liveSessionIdRef.current) {
+          const newSessionId = latestSession.session_id;
+          liveSessionIdRef.current = newSessionId;
+          setLiveSessionId(newSessionId);
+
+          const events = await fetchEvents(newSessionId);
+          if (isCancelled) return;
+
+          setRawEvents(events);
+          const incId = `INC-${newSessionId}`;
+          setSelectedIncidentId(incId);
+
+          if (events.length > 0) {
+            setSelectedEvent(events[events.length - 1]);
+            const res = await analyzeIncident(events, [], true, `INC-${newSessionId}`);
+            if (!isCancelled) {
+              const activeIncId = res.incident_info?.incident_id || res.incident?.incident_id || `INC-${newSessionId}`;
+              setSelectedIncidentId(activeIncId);
+              setIncidents([res]);
+              setToast({
+                message: `Discovered new live session ${newSessionId}. Analysis complete.`,
+                type: "info",
+              });
+            }
+          }
+        }
+      } catch (err) {
+        // Quietly handle connection errors during startup
+      }
+    };
+
+    checkNewSessions();
+    const interval = setInterval(checkNewSessions, 1500);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Live Telemetry Polling Effect
+  useEffect(() => {
+    if (!liveSessionId) return;
+
+    let isCancelled = false;
+    let isRequestInFlight = false;
+
+    const interval = setInterval(async () => {
+      if (isCancelled || isRequestInFlight) return;
+      isRequestInFlight = true;
+
+      try {
+        const latestEvents = await fetchEvents(liveSessionId);
+        if (isCancelled) return;
+
+        setRawEvents((prevEvents) => {
+          if (
+            prevEvents.length === latestEvents.length &&
+            prevEvents.every((ev, idx) => ev.event_id === latestEvents[idx]?.event_id)
+          ) {
+            return prevEvents;
+          }
+
+          // New events arrived! Run backend analysis to update graph, findings & AEGIS blast radius
+          analyzeIncident(latestEvents, [], true, `INC-${liveSessionId}`)
+            .then((res) => {
+              if (!isCancelled) {
+                setIncidents([res]);
+                if (latestEvents.length > 0 && !selectedEvent) {
+                  setSelectedEvent(latestEvents[latestEvents.length - 1]);
+                }
+              }
+            })
+            .catch((err) => console.warn("Live analysis error:", err));
+
+          return latestEvents;
+        });
+      } catch (err) {
+        console.warn("Live polling error:", err);
+      } finally {
+        isRequestInFlight = false;
+      }
+    }, pollingIntervalMs);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [liveSessionId, pollingIntervalMs, selectedEvent]);
+
   // Auto dismiss toast notification
   useEffect(() => {
     if (toast) {
@@ -93,6 +201,56 @@ export const IncidentView: React.FC = () => {
     setActiveNavItem(item);
     if (navToHash[item]) {
       window.location.hash = navToHash[item];
+    }
+  };
+
+  // Run Live Target Agent Scenario (Malicious or Benign)
+  const loadLiveTargetDemo = async (scenario: "malicious" | "benign" = "malicious") => {
+    setLoading(true);
+    setError(null);
+    setSelectedEvent(null);
+    setRawEvents([]);
+    try {
+      const demoRes = await triggerTargetDemo(scenario, undefined, 0.6, true);
+      const newSessionId = demoRes.session_id;
+      liveSessionIdRef.current = newSessionId;
+      setLiveSessionId(newSessionId);
+
+      const initialEvents = await fetchEvents(newSessionId);
+      setRawEvents(initialEvents);
+
+      const res = await analyzeIncident(
+        initialEvents,
+        [],
+        true,
+        `INC-${newSessionId}`
+      );
+
+      setIncidents([res]);
+      const incId = res.incident_info?.incident_id || `INC-${newSessionId}`;
+      setSelectedIncidentId(incId);
+
+      if (initialEvents.length > 0) {
+        setSelectedEvent(initialEvents[initialEvents.length - 1]);
+      }
+
+      setToast({
+        message: `Live target agent ${scenario.toUpperCase()} scenario started (${newSessionId}). Polling telemetry...`,
+        type: "success",
+      });
+
+      navigateTo("Execution");
+    } catch (err: any) {
+      setError(
+        err.message ||
+          "ERROR: Connection to RedBlue Core lost. Ensure backend FastAPI server is active."
+      );
+      setToast({
+        message: `Failed to execute live ${scenario} demo. Core server unreachable.`,
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -369,6 +527,63 @@ export const IncidentView: React.FC = () => {
 
     // 1. OVERVIEW PAGE (Default Startup Page)
     if (activeNavItem === "Overview") {
+      const activeIncident = incidents[0] || null;
+      const hasThreatFindings = Boolean(
+        activeIncident && activeIncident.findings && activeIncident.findings.length > 0
+      );
+
+      const dynamicDescription = activeIncident
+        ? hasThreatFindings
+          ? activeIncident.investigation?.attack_narrative ||
+            activeIncident.investigation?.root_cause ||
+            `Active security threat detected (${activeIncident.findings.length} findings): ${activeIncident.findings
+              .map((f) => f.title)
+              .join(", ")}. Ingested ${activeIncident.events.length} AgentEvents into BLACKBOX security pipeline.`
+          : `Live target agent telemetry ingested (${activeIncident.events.length} events). 0 security findings detected for benign email processing session.`
+        : "Standing by for live target agent telemetry. Execute an attack from the Attacker Mac or click [ RUN LIVE TARGET DEMO ] below to inspect live execution.";
+
+      const dynamicAttackVector = activeIncident
+        ? hasThreatFindings
+          ? Array.from(
+              new Set(activeIncident.findings.map((f) => f.title || f.detector_type))
+            ).join(", ")
+          : "None (Benign Execution)"
+        : "Awaiting live telemetry";
+
+      const getTargetAsset = (inc: IncidentResponse | null): string => {
+        if (!inc) return "Awaiting live telemetry";
+        const sensitiveRes =
+          inc.blast_radius?.reachable_sensitive_resources || inc.incident?.sensitive_resources;
+        if (sensitiveRes && sensitiveRes.length > 0) {
+          const first = sensitiveRes[0];
+          return typeof first === "string" ? first : first.resource;
+        }
+        const extDest = inc.blast_radius?.reachable_external_destinations;
+        if (extDest && extDest.length > 0) {
+          return extDest[0];
+        }
+        const eventRes = inc.events?.find((e) => e.resource)?.resource;
+        if (eventRes) return eventRes;
+        return "None Exposed";
+      };
+
+      const dynamicTargetAsset = getTargetAsset(activeIncident);
+
+      const getVerificationStatus = (inc: IncidentResponse | null): string => {
+        if (!inc) return "CHIMERA Counterfactual Engine";
+        if (inc.defense_result?.defense_verified || inc.verification?.defense_verified) {
+          return `CHIMERA (Verified: ${
+            inc.defense_result?.attack_after || inc.verification?.attack_after || "BLOCKED"
+          })`;
+        }
+        if (inc.intervention?.selected) {
+          return `CHIMERA (Policy: ${inc.intervention.selected.intervention_type})`;
+        }
+        return "CHIMERA Counterfactual Engine";
+      };
+
+      const dynamicVerificationEngine = getVerificationStatus(activeIncident);
+
       return (
         <div className="space-y-6 max-w-5xl mx-auto">
           {/* Top Operational Status Header */}
@@ -402,12 +617,16 @@ export const IncidentView: React.FC = () => {
                 Active Incidents
               </span>
               <span className="font-bold text-blue-600 text-sm mt-0.5 block">
-                {incidents.length} Generated
+                {hasThreatFindings
+                  ? "1 Active Threat"
+                  : activeIncident
+                  ? "0 Threats (Benign)"
+                  : "0 Active"}
               </span>
             </Card>
           </div>
 
-          {/* Hero Demo Control Card */}
+          {/* Hero Control Card */}
           <div className="bg-white border border-slate-200 rounded-sm p-8 shadow-sm space-y-6 text-center">
             <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-slate-900 border border-slate-800 rounded-full font-mono text-xs text-white font-semibold">
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
@@ -419,30 +638,51 @@ export const IncidentView: React.FC = () => {
 
             <div className="space-y-2">
               <h1 className="text-2xl font-bold font-mono tracking-tight text-slate-900">
-                SYSTEM STANDBY — DEMO SCENARIO READY
+                {activeIncident
+                  ? hasThreatFindings
+                    ? `LIVE THREAT ANALYZED: ${
+                        activeIncident.incident_info?.incident_id ||
+                        activeIncident.incident?.incident_id ||
+                        "ACTIVE"
+                      }`
+                    : `LIVE BENIGN SESSION ANALYZED`
+                  : "SYSTEM STANDBY — MONITORING LIVE AGENT TELEMETRY"}
               </h1>
               <p className="text-sm font-sans text-slate-600 max-w-xl mx-auto">
-                Simulate an Indirect Prompt Injection attack on the Customer Support Agent, observe the real-time execution graph, compute the AEGIS blast radius, synthesize P2.2 root cause explanation, and verify defense via CHIMERA.
+                {dynamicDescription}
               </p>
             </div>
 
             {/* Actions Row */}
-            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
               <button
-                onClick={() => loadDemoAttack(true)}
+                onClick={() => loadLiveTargetDemo("malicious")}
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-mono text-sm font-bold px-8 py-3.5 rounded-xs tracking-wider shadow-md flex items-center space-x-3 transition-all duration-200 cursor-pointer transform hover:-translate-y-0.5"
+                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-mono text-xs font-bold px-6 py-3 rounded-xs tracking-wider shadow-md flex items-center space-x-2 transition-all duration-200 cursor-pointer transform hover:-translate-y-0.5"
               >
                 <span>▶</span>
-                <span>RUN DEMO ATTACK</span>
+                <span>RUN LIVE TARGET DEMO (MALICIOUS)</span>
               </button>
 
-              {incidents.length > 0 && (
+              <button
+                onClick={() => loadLiveTargetDemo("benign")}
+                disabled={loading}
+                className="bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-mono text-xs font-bold px-6 py-3 rounded-xs tracking-wider shadow-md flex items-center space-x-2 transition-all duration-200 cursor-pointer transform hover:-translate-y-0.5"
+              >
+                <span>▶</span>
+                <span>RUN LIVE TARGET DEMO (BENIGN)</span>
+              </button>
+
+              {activeIncident && (
                 <button
                   onClick={() => navigateTo("Incidents")}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-mono text-sm font-bold px-6 py-3.5 rounded-xs tracking-wider transition-all duration-200 cursor-pointer"
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-mono text-xs font-bold px-5 py-3 rounded-xs tracking-wider transition-all duration-200 cursor-pointer"
                 >
-                  👁 VIEW GENERATED INCIDENT ({incidents[0].incident_info?.incident_id || "INC-DEMO-1"})
+                  👁 VIEW INCIDENT (
+                  {activeIncident.incident_info?.incident_id ||
+                    activeIncident.incident?.incident_id ||
+                    "CURRENT"}
+                  )
                 </button>
               )}
             </div>
@@ -452,19 +692,21 @@ export const IncidentView: React.FC = () => {
                 <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">
                   ATTACK VECTOR
                 </span>
-                <span className="font-semibold text-slate-900">Indirect Prompt Injection</span>
+                <span className="font-semibold text-slate-900">{dynamicAttackVector}</span>
               </div>
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xs">
                 <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">
                   TARGET ASSET
                 </span>
-                <span className="font-semibold text-slate-900">CRM Customer PII Database</span>
+                <span className="font-semibold text-slate-900">{dynamicTargetAsset}</span>
               </div>
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xs">
                 <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">
                   VERIFICATION ENGINE
                 </span>
-                <span className="font-semibold text-slate-900">CHIMERA Counterfactual</span>
+                <span className="font-semibold text-slate-900">
+                  {dynamicVerificationEngine}
+                </span>
               </div>
             </div>
           </div>
@@ -611,13 +853,16 @@ export const IncidentView: React.FC = () => {
       <div className="space-y-6 relative">
         {/* Incident Context Header */}
         <IncidentHeader
-          incidentId={incidentInfo?.incident_id || "INC-DEMO-1"}
-          agentId={incidentInfo?.agent_id || "agent-support-bot"}
-          sessionId={incidentInfo?.session_id || "S-DEMO-1"}
-          severity={incidentInfo?.severity || "CRITICAL"}
-          status={verification?.defense_verified ? "DEFENSE VERIFIED" : "ACTIVE THREAT"}
+          incidentId={incidentInfo?.incident_id || currentIncident.incident?.incident_id || "INC-ACTIVE"}
+          agentId={incidentInfo?.agent_id || currentIncident.incident?.agent_id || "agent-email-processor"}
+          sessionId={incidentInfo?.session_id || currentIncident.incident?.session_id || "S-LIVE-ACTIVE"}
+          severity={incidentInfo?.severity || (currentIncident.findings && currentIncident.findings.length > 0 ? "CRITICAL" : "LOW")}
+          status={verification?.defense_verified ? "DEFENSE VERIFIED" : (currentIncident.findings && currentIncident.findings.length > 0 ? "ACTIVE THREAT" : "BENIGN EXECUTION")}
+          threatVector={currentIncident.findings && currentIncident.findings.length > 0 ? Array.from(new Set(currentIncident.findings.map(f => f.title || f.detector_type))).join(", ") : "None (Benign Execution)"}
+          isPolling={Boolean(liveSessionId)}
           onSimulateClick={handleOpenWhatIfModal}
           onExportClick={handleExportReport}
+          onRunLiveDemo={loadLiveTargetDemo}
         />
 
         {/* Section Sub-Navigation Tabs */}
@@ -804,7 +1049,7 @@ export const IncidentView: React.FC = () => {
     <SecurityDashboardLayout
       activeNavItem={activeNavItem}
       onNavItemClick={navigateTo}
-      incidentsCount={incidents.length}
+      incidentsCount={incidents.filter((i) => i.findings && i.findings.length > 0).length}
     >
       {/* Toast Notification Banner */}
       {toast && (

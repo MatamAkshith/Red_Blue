@@ -168,7 +168,7 @@ export async function analyzeIncident(
   events: AgentEvent[],
   known_sensitive_resources: SensitiveResource[] = [],
   explain: boolean = true,
-  incident_id: string = "INC-DEMO-1"
+  incident_id: string = "INC-ACTIVE"
 ): Promise<IncidentResponse> {
   return json<IncidentResponse>(
     await fetch(`${BASE}/incidents/analyze`, {
@@ -221,6 +221,48 @@ export async function defendIncident(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ events }),
+    })
+  );
+}
+
+export type SessionSummary = {
+  session_id: string;
+  event_count: number;
+  last_seen: string;
+};
+
+export async function fetchSessions(limit: number = 10): Promise<SessionSummary[]> {
+  return json<SessionSummary[]>(await fetch(`${BASE}/events/sessions?limit=${limit}`));
+}
+
+export async function fetchEvents(sessionId: string): Promise<AgentEvent[]> {
+  return json<AgentEvent[]>(await fetch(`${BASE}/events?session_id=${encodeURIComponent(sessionId)}`));
+}
+
+export async function triggerTargetDemo(
+  scenario: "malicious" | "benign" = "malicious",
+  sessionId?: string,
+  demoDelay: number = 0.6,
+  asyncRun: boolean = true
+): Promise<{
+  session_id: string;
+  scenario: string;
+  status: string;
+  event_count?: number;
+  events?: AgentEvent[];
+  demo_delay?: number;
+  async_run?: boolean;
+}> {
+  return json(
+    await fetch(`${BASE}/events/run-demo`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scenario,
+        session_id: sessionId,
+        demo_delay: demoDelay,
+        async_run: asyncRun,
+      }),
     })
   );
 }

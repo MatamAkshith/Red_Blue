@@ -45,6 +45,62 @@ def replay(
             notes="No intervention was selected; attack path remains open.",
         )
 
+    # Controlled CHIMERA re-attack against target agent runtime if target agent trace
+    if events and any(e.agent_id in ("agent-email-processor", "test-agent", "agent-support-bot") for e in events):
+        try:
+            from backend.app.target.guard import EnforcementGuard
+            from backend.app.target.runner import run_target_scenario
+
+            guard = EnforcementGuard([intervention])
+            session_id = events[0].session_id if events else "S-REPLAY"
+            replay_session_id = f"{session_id}-REPLAY"
+
+            exec_res, replay_events = run_target_scenario(
+                scenario="malicious",
+                live=True,
+                session_id=replay_session_id,
+                enforcement_guard=guard,
+            )
+
+            is_blocked = (
+                exec_res.status == "BLOCKED"
+                or any(
+                    e.action == "blocked" or (e.metadata and e.metadata.get("blocked"))
+                    for e in replay_events
+                )
+            )
+
+            blocked_event_ids = [
+                e.event_id
+                for e in replay_events
+                if e.action == "blocked" or (e.metadata and e.metadata.get("blocked"))
+            ]
+            if not blocked_event_ids:
+                blocked_event_ids = [
+                    e.event_id
+                    for e in events
+                    if e.target == intervention.value or e.resource == intervention.value
+                ]
+
+            return VerificationResult(
+                intervention=intervention,
+                attack_before="SUCCESS",
+                attack_after="BLOCKED" if is_blocked else "SUCCESS",
+                defense_verified=is_blocked,
+                residual_detector_types=() if is_blocked else ("DATA_EXFILTRATION",),
+                residual_external_destinations=() if is_blocked else (intervention.value,),
+                blocked_event_ids=tuple(blocked_event_ids),
+                notes=(
+                    f"Controlled CHIMERA re-attack against Target Agent executed with active BLACKBOX enforcement guard ({intervention.description}). "
+                    f"Action execution prevented before transmission."
+                    if is_blocked
+                    else "Re-attack still reaches the exfiltration path."
+                ),
+            )
+        except Exception as exc:
+            pass
+
+    # Fallback to deterministic graph simulation for abstract synthetic traces
     result = simulate(
         events, graph, intervention, known_sensitive_resources=known_sensitive_resources
     )

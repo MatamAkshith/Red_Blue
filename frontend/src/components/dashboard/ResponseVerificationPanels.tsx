@@ -252,7 +252,7 @@ export const ResponseVerificationPanels: React.FC<ResponseVerificationPanelsProp
               <div>
                 <span className="text-slate-500">ORIGINAL INCIDENT:</span>{" "}
                 <span className="font-bold text-slate-900">
-                  {memoryPattern?.provenance?.incident_id || "INC-DEMO-1"}
+                  {memoryPattern?.provenance?.incident_id || "INC-HISTORICAL"}
                 </span>
               </div>
               <div>

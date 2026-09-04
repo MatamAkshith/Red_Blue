@@ -113,6 +113,10 @@ def defend_incident(incident_id: str, request: DefendRequest) -> dict[str, Any]:
         pattern_store=get_pattern_store(),
     )
 
+    if report.intervention and report.intervention.selected:
+        from backend.app.target.guard import get_global_enforcement_guard
+        get_global_enforcement_guard().install(report.intervention.selected)
+
     verif = report.verification
     return {
         "incident_id": incident_id,
