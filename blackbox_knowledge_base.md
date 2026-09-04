@@ -295,6 +295,15 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
 - **Offline & No-LLM Requirement**: Queries `FailurePatternStore.recall()` deterministically without calling LLMs or external heuristic services.
 - **Strict Advisory Principle**: Provides historical provenance context (`prior_incident_id`, `prior_session_id`) and risk signals without overriding P1 security facts, AEGIS blast radius, or `IncidentAnalysis`.
 
+### [Task 4 - API Data Contracts] Master Payload Schemas & Unified API Layer
+- **Master Payload Schema**: Created `backend/app/api/schemas.py` defining `IncidentResponse` (`incident_info`, `events`, `findings`, `attack_path`, `investigation`, `blast_radius`, `what_if_result`, `intervention`, `defense_result`, `chimera_verification`, `memory_pattern`), plus computed property aliases `incident` and `verification` for backwards-compatibility.
+- **Unified API Endpoints**: Updated `backend/app/api/routes_incidents.py`:
+  - `GET /incidents/demo-scenario`: Returns baseline demonstration events and sensitive resource definitions.
+  - `POST /incidents/analyze`: Ingests trace events, runs full pipeline, and returns master `IncidentResponse`.
+  - `POST /incidents/{incident_id}/simulate`: Accepts `SimulateRequest`, executes counterfactual what-if simulation, and returns state.
+  - `POST /incidents/{incident_id}/defend`: Accepts `DefendRequest`, applies selected intervention, executes CHIMERA re-attack verification, and returns defense verification state.
+
+
 
 
 

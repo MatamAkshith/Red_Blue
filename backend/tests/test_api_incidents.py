@@ -86,3 +86,35 @@ def test_analyze_is_deterministic():
     a = client.post("/incidents/analyze", json=_payload()).json()
     b = client.post("/incidents/analyze", json=_payload()).json()
     assert a == b
+
+
+def test_simulate_endpoint():
+    events_payload = [e.model_dump(mode="json") for e in build_exfiltration_events()]
+    resp = client.post(
+        "/incidents/INC-DEMO/simulate",
+        json={
+            "events": events_payload,
+            "intervention_type": "BLOCK_EXTERNAL_DESTINATION",
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["incident_id"] == "INC-DEMO"
+    assert data["status"] == "SIMULATED"
+    assert "evaluated_simulations" in data
+
+
+def test_defend_endpoint():
+    events_payload = [e.model_dump(mode="json") for e in build_exfiltration_events()]
+    resp = client.post(
+        "/incidents/INC-DEMO/defend",
+        json={
+            "events": events_payload,
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["incident_id"] == "INC-DEMO"
+    assert data["status"] == "DEFENDED"
+    assert data["defense_verified"] is True
+
