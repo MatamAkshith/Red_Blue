@@ -21,27 +21,29 @@ Real AI Agent -> Blackbox SDK -> Event Collector -> Normalizer -> Universal Agen
 | Universal AgentEvent schema | `backend/app/events/schemas.py` | **Implemented** |
 | Event storage (append-only SQLite) | `backend/app/events/storage.py` | **Implemented** |
 | Event collector + API | `backend/app/events/collector.py`, `backend/app/api/routes_events.py` | **Implemented** |
-| Normalizer | `backend/app/events/normalizer.py` | Stub |
-| Execution graph (NetworkX) | `backend/app/graph/builder.py` | Stub |
-| Deterministic detection | `backend/app/detect/rules.py` | Stub |
-| AEGIS / blast radius | `backend/app/aegis/blast_radius.py` | Stub |
+| Agent event ingestion + storage | `backend/app/events/` | **Implemented** |
+| P1.1 Execution graph (NetworkX) | `backend/app/graph/` | **Implemented** |
+| P1.2 Deterministic detection | `backend/app/detection/` | **Implemented** |
+| P1.3 AEGIS impact + blast radius | `backend/app/aegis/` | **Implemented** |
 | P1 -> P2 contract (`IncidentAnalysis`) | `backend/app/contracts/incident_analysis.py`, `contracts/incident_analysis.json` | **Implemented** |
-| P1 evidence extraction (graph -> IncidentAnalysis) | `backend/app/evidence/extractor.py` | Stub |
+| P1.4 Orchestrator (`run_pipeline`) | `backend/app/orchestrator.py` | **Implemented** |
 | P2 evidence extraction (IncidentAnalysis -> LLM-ready package) | `backend/app/understand/evidence/extractor.py` | **Implemented** |
 | Featherless client (OpenAI-compatible) | `backend/app/understand/featherless/client.py` | **Implemented**, live-tested |
 | Investigation schema + prompt | `backend/app/understand/investigation/schemas.py`, `prompts.py` | **Implemented** |
 | Investigator orchestration (`investigate(incident)`) | `backend/app/understand/investigation/investigator.py` | **Implemented** |
 | Deterministic fallback (Featherless unavailable) | `backend/app/understand/fallback/deterministic.py` | **Implemented** |
 | `POST /investigate` API route | `backend/app/api/routes_investigate.py` | **Implemented**, live-tested |
-| What-if simulation | `backend/app/whatif/simulator.py` | Stub |
-| Intervention engine | `backend/app/intervention/engine.py` | Stub |
-| CHIMERA (re-attack) | `backend/app/chimera/replay.py` | Stub |
+| What-if simulation | `backend/app/whatif/simulator.py` | **Implemented** |
+| Minimum-effective intervention | `backend/app/intervention/` | **Implemented** |
+| CHIMERA re-attack + verification | `backend/app/chimera/replay.py` | **Implemented** |
 | Self-protection / Safe Mode | `backend/app/selfprotect/integrity.py` | Stub |
 | Blackbox SDK / observer | `sdk/observer.py` | Stub |
 | Test agent (target) | `agent/` | Placeholder |
 | Frontend (React/TS/Vite/Tailwind) | `frontend/` | Scaffold only |
 
-Stubs raise `NotImplementedError` — they mark the shape of the system, not working logic. See `DEVELOPMENT RULES` below before filling one in.
+Remaining stubs (`events/normalizer.py`, `evidence/extractor.py`, `selfprotect/integrity.py`, `understand/reasoning/recommendation.py`, `sdk/observer.py`) raise `NotImplementedError` — they mark shape, not working logic.
+
+Run the full MVP loop: `app.orchestrator.run_pipeline(events, known_sensitive_resources=...)` — see `backend/app/scenarios/exfiltration.py` and `backend/tests/test_mvp_pipeline.py`.
 
 ## Running the backend
 

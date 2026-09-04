@@ -1,194 +1,288 @@
 # BLACKBOX Knowledge Base
 
-This file did not exist before Person 2.2 (Investigation Layer Integration &
-Evidence Hardening). It documents the finalized P2.2 architecture only —
-the Understand/Featherless investigation layer. It does not cover P1
-(execution graph, detection, AEGIS — still stubs), the frontend, or later
-phases (Chimera, self-protection, etc.); those get their own sections here
-when they're built, and this section should not be rewritten to describe
-them speculatively in the meantime.
+## 1. Core Problem Statement
 
-## P1 → P2 contract
+Modern AI agents interact with tools, APIs, databases, documents, memory systems, other agents, and external web services. When an agent behaves incorrectly, succumbs to indirect prompt injection, or executes unauthorized actions, traditional logging systems only record isolated events rather than the entire execution lineage.
 
-`IncidentAnalysis` (`backend/app/contracts/incident_analysis.py`, mirrored
-as language-agnostic JSON Schema at `contracts/incident_analysis.json`) is
-the frozen contract P1 hands to P2. It represents **security evidence P1
-has already determined to be true** — not raw application logs, and not
-something P2 or an LLM is asked to (re)discover.
+BLACKBOX solves this problem by reconstructing and reasoning about the AI agent's full execution behavior, enabling security teams to investigate incidents, measure blast radius impact, simulate counterfactual interventions, and deterministically verify defenses.
 
-Fields: `incident_id`, `agent_id`, `session_id`, `incident_type`,
-`severity`, `events` (list of `AgentEvent`), `attack_path`, `permissions`,
-`sensitive_resources`, `blast_radius`, `evidence` (list of tagged
-`EvidenceItem`).
+## 2. Solution Approach
 
-**Immutability (Checkpoint 5):** `IncidentAnalysis` and its nested
-`BlastRadius`/`PermissionFact`/`SensitiveResource` models are
-`frozen=True` — attribute reassignment raises `ValidationError`.
-`attack_path`, `permissions`, and `sensitive_resources` are `tuple`, not
-`list`, so in-place mutation (`.append`, `__setitem__`) is impossible too.
-`events`/`evidence` were deliberately left as mutable `list` — outside
-this hardening's named scope (severity/attack_path/blast_radius/
-permissions/sensitive_resources).
+BLACKBOX normalizes AI agent execution telemetry into a canonical **Universal AgentEvent** stream and constructs an **Execution Graph**. The Execution Graph is the central computational object of BLACKBOX upon which all security, impact analysis, and verification capabilities operate.
 
-## Evidence provenance
-
-`build_prompt_evidence()` (`backend/app/understand/evidence/extractor.py`)
-deterministically compresses an `IncidentAnalysis` into a compact,
-LLM-ready package — initial trigger, suspicious input, trust boundary
-crossings, important decisions, tool calls, privilege changes, sensitive
-resources accessed, data movement, external destinations, detection
-findings, anomalies, attack path, blast radius. Pure filtering/grouping of
-already-given facts; no LLM call, no inference.
-
-`known_event_ids(evidence)` collects every legitimate `event_id` present
-anywhere in that package. `FeatherlessClient._validate_provenance()` checks
-every `event_id` a Featherless response references (`critical_decision`,
-each `evidence_interpretation` entry) against this set — an unknown ID
-raises `FeatherlessError` (caught by the Investigator, routed to the
-deterministic fallback). This is what stops a hallucinated event_id from
-being silently accepted as confirmed evidence.
-
-## Fact vs. interpretation boundary
-
-`Investigation` (`backend/app/understand/investigation/schemas.py`) —
-`root_cause`, `attack_narrative`, `critical_decision`,
-`evidence_interpretation`, `confidence`, `contributing_factors`,
-`failure_pattern_candidate` — has **no field that could carry a P1 fact**
-(`events`, `attack_path`, `permissions`, `sensitive_resources`,
-`blast_radius` are all structurally absent). An LLM response literally
-cannot overwrite or restate a P1 finding; there's nowhere for it to go.
-`critical_decision`/`evidence_interpretation` are the only fields that cite
-a specific `event_id` — provenance-checked, per above. `root_cause`/
-`attack_narrative`/`contributing_factors` are plain `str`/`list[str]`, free
-prose with no grounding claim to defend.
-
-## Featherless's role
-
-Interprets evidence; is never the security authority. Called only from
-`backend/app/understand/featherless/client.py` (`FeatherlessClient`) —
-verified by a static AST scan (`test_investigator_integration.py`) that no
-other file under `app/understand/` imports `openai`. Uses the official
-`openai` SDK against Featherless's OpenAI-compatible endpoint
-(`FEATHERLESS_BASE_URL`, default `https://api.featherless.ai/v1`); model
-is fully configurable via `FEATHERLESS_MODEL` (currently defaults to
-`NousResearch/Meta-Llama-3.1-8B-Instruct`, verified working live).
-
-The system prompt (`backend/app/understand/investigation/prompts.py`)
-establishes the philosophy ("We don't secure the model. We secure the
-agent's behavior." / "Technology changes. Failure patterns persist."), the
-P1/P2 authority split, an explicit MUST list (use only supplied evidence,
-explain why, reconstruct the attack chain, identify root cause and
-critical decision, explain relationships between evidence, reference
-supporting event_ids, distinguish fact from inference), and an explicit
-MUST NOT list (invent events/event IDs/tools/permissions/resources/
-timestamps/agents/attack paths; invent or restate evidence; modify or
-contradict severity/blast_radius/any P1 finding; reference an event_id not
-in the supplied evidence).
-
-## Investigator
-
-`investigate(incident, *, settings=None, client=None)`
-(`backend/app/understand/investigation/investigator.py`) — the single
-entry point: `IncidentAnalysis` → `build_prompt_evidence()` →
-`FeatherlessClient.analyze()` → `Investigation`, catching `FeatherlessError`
-specifically (not a broad `except Exception` — a real bug in an injected
-client still propagates, verified by test) and falling back to
-`fallback_investigation()` on it. Framework-agnostic: no FastAPI import
-anywhere in `app/understand/` (verified by static AST scan, not just
-absence-of-error-at-runtime, since `fastapi` is already loaded elsewhere in
-the same test process by the time any test runs). `settings`/`client` are
-optional injection points; `investigate(incident)` alone is the documented
-simple interface.
-
-`POST /investigate` (`backend/app/api/routes_investigate.py`) is a thin
-2-line HTTP translation layer over this — validates the request body as
-`IncidentAnalysis`, returns `Investigation`, contains no investigation
-logic of its own, never touches Settings/the API key directly.
-
-## Deterministic fallback
-
-`fallback_investigation(evidence)`
-(`backend/app/understand/fallback/deterministic.py`) — runs whenever
-`investigate()` catches a `FeatherlessError`, for any reason: missing/
-invalid API key, timeout, connection failure, authentication failure, rate
-limit, malformed (invalid JSON or schema-invalid) response, or a
-provenance violation. No LLM reasoning happens here.
-
-`root_cause`/`attack_narrative` are rendered as three explicitly labeled
-sections:
-
-```
-CONFIRMED:
-<facts stated plainly, e.g. "Agent accessed confirmed sensitive resource(s): customer_database.">
-
-DETERMINISTIC INFERENCE:
-<a small number of fixed rules applied to those facts, e.g. "Sensitive data reached an external destination.">
-
-AI EXPLANATION:
-Unavailable -- Featherless could not be reached. This is a deterministic-only report...
+**End-to-End Conceptual Architecture:**
+```text
+AI Agent
+  ↓
+SDK / Adapter
+  ↓
+Event Collector
+  ↓
+Normalizer
+  ↓
+Universal AgentEvent
+  ↓
+Execution Graph
+  ↓
+┌───────────────────────────────────────────────┐
+│ Detection                                     │
+│ Impact / Blast Radius                         │
+│ Evidence Extraction                           │
+└───────────────────────────────────────────────┘
+  ↓
+Incident
+  ↓
+Understand
+  ↓
+Featherless Reasoning (LLM)
+  ↓
+Root Cause / Narrative / Evidence
+  ↓
+What-If / Counterfactual Simulation
+  ↓
+Intervention
+  ↓
+Defense
+  ↓
+CHIMERA / Re-Attack
+  ↓
+Verification
 ```
 
-`confidence` is always `0.0` — signaling "no AI assessment was made," not
-"zero confidence in the underlying facts." `failure_pattern_candidate` is
-always `None` — abstracting a reusable pattern requires generalization the
-fallback deliberately doesn't attempt. `critical_decision` picks the first
-`DECISION` event in the attack path by a fixed rule (or the honest
-`"UNKNOWN"` sentinel if none exists), explicitly labeled "Deterministic
-inference," never presented as an AI judgement.
+> **Note**: Phase 1.1 focuses exclusively on the **Execution Graph foundation** (converting events to nodes/edges, preserving event telemetry, representing execution chains/branches, deterministic traversal, and graph integrity).
 
-## Malformed output handling
+## 3. Architectural Principle
 
-`FeatherlessClient.analyze()` rejects, rather than trusts, every malformed
-shape:
+### Deterministic Security
+The Execution Graph, relationship tracking, reachability, blast radius, counterfactual simulation, and verification must be 100% **deterministic and evidence-based**.
 
-| Failure mode | Where it's caught |
-|---|---|
-| Invalid JSON | `json.loads` → `FeatherlessError` |
-| Missing required fields | `Investigation.model_validate` → `ValidationError` → `FeatherlessError` |
-| Invalid confidence (outside [0, 1]) | `confidence: float = Field(ge=0.0, le=1.0)` → `ValidationError` → `FeatherlessError` |
-| Nonexistent/fabricated event_id | `_validate_provenance()` → `FeatherlessError` |
-| Wrong types (e.g. `critical_decision` as a string) | Pydantic type coercion failure → `ValidationError` → `FeatherlessError` |
-| Contradictory prose claims (e.g. "severity is actually LOW") | Not rejected — harmless, since there's no field for it to land in; P1 facts are untouched regardless |
+### LLM Reasoning
+LLMs (such as Featherless) are used downstream solely for interpretation, incident explanation, narrative generation, and reasoning over structured evidence. The LLM is **NOT** the authoritative source of graph structure or security truth.
 
-Every rejection path converges on the same `FeatherlessError` → deterministic
-fallback route. Nothing malformed is ever returned to a caller as a trusted
-`Investigation`.
+## 4. Universal AgentEvent
 
-## Security invariants
+### Target Architecture Contract
+The Universal AgentEvent represents a normalized, framework-agnostic execution step.
 
-- Featherless API key: read only via `os.environ`/`.env`
-  (`backend/app/core/config.py`), never hardcoded, never logged, never
-  returned by any API response, never present in tests/fixtures/README
-  (all use placeholder values like `"test-key"`), never in an exception
-  message (tested explicitly). `.env` is gitignored (verified at root and
-  nested paths); `.env.example` holds placeholders only. Verified clean
-  across the full `git log --all -p` history, not just the working diff.
-- An LLM response cannot modify P1 security truth: structurally (no field
-  exists for it), by immutability (frozen contract, tuples not lists), and
-  by pipeline behavior (`investigate()` never writes back to `incident`) —
-  all independently tested, including with deliberately contradictory LLM
-  prose.
-- The automated test suite (`pytest tests`, 150 tests as of this writing)
-  makes zero live network calls — every `FeatherlessClient` in a test is
-  either monkeypatched or never reaches the network. The one live-hitting
-  artifact, `backend/scripts/featherless_smoke_test.py`, lives outside
-  `tests/` and contributes zero collected test items even under a bare
-  `pytest` run with no path argument.
+**Target Fields:**
+- `event_id`: Unique identifier for the event.
+- `parent_event_id`: Optional ID of the parent event in the execution chain.
+- `session_id`: Session or execution trace identifier.
+- `agent_id`: Identifier of the agent.
+- `event_type`: Event category (`agent_input`, `context_retrieval`, `decision`, `tool_call`, `tool_result`, `data_access`, `agent_message`, `external_request`, `policy_check`, `agent_output`).
+- `source`: Origin entity or component.
+- `target`: Target entity or component.
+- `trust_level`: Security boundary (`trusted`, `internal`, `untrusted`, `external`).
+- `permission`: Access level (`none`, `read`, `write`, `execute`, `export`, `admin`).
+- `resource`: Target resource URI/identifier.
+- `timestamp`: Event UTC timestamp.
+- `metadata`: Arbitrary payload dictionary.
 
-## Current limitations
+> **Status**: TARGET contract. The actual repository implementation must be inspected and verified before assuming exact structural parity.
 
-- P1 (`app/graph`, `app/detect`, `app/aegis`, `app/evidence`) is still all
-  `NotImplementedError` stubs — everything above is proven against the
-  synthetic `make_incident()`/`make_rich_incident()` fixtures, not a real
-  detection pipeline yet.
-- The deterministic fallback's `evidence_interpretation` only surfaces
-  `trust_boundary_crossings` and `external_destinations` — it doesn't yet
-  narrate `tool_calls`, `data_movement`, or `detection_findings`
-  specifically (they're still preserved and forwarded to Featherless when
-  it *is* available; only the fallback's own summary is partial).
-- `openai.RateLimitError` has no dedicated unit test (the code path is
-  structurally identical to the already-tested `AuthenticationError`
-  branch, both `APIStatusError` subclasses).
-- No retry-before-fallback: a single transient bad response from
-  Featherless goes straight to the deterministic path rather than getting
-  one more attempt at a real AI explanation.
+## 5. Phase 1.1 Scope
+
+### In-Scope (Phase 1.1):
+- Execution Graph foundation setup
+- Converting validated `AgentEvent` objects into graph nodes
+- Preserving full event identity and payload data on graph nodes
+- Representing parent-child execution relationships as directed edges (`parent_event_id -> event_id`)
+- Supporting branching execution paths and multiple root nodes
+- Supporting deterministic graph traversal
+- Validating graph integrity (acyclic execution verification, dangling parent handling)
+- Deterministic graph construction and unit testing
+
+### Out-of-Scope (Phase 1.1):
+- Prompt injection detection, attack detection, attack classification
+- Risk/severity scoring, AEGIS blast radius, What-If simulation
+- Counterfactual intervention optimization, CHIMERA re-attack, defense verification
+- Featherless / LLM reasoning integration
+- UI redesign
+- Replacing P3 backend infrastructure or storage models
+
+## 6. P1 / P3 Boundary
+
+- **P3 Ownership**: Event generation, ingestion APIs, normalizers, event persistence/storage, and server infrastructure.
+- **P1 Ownership**: Execution Graph, detection engines, evidence extraction, AEGIS impact, What-If simulation, intervention, and verification.
+- **Boundary Rule**: P1 consumes `AgentEvent` data produced by P3. P1 must **NOT** create a competing event model or usurp P3's storage layer.
+
+## 7. Execution Graph Data Model
+
+- **Node Representation**: Every node in the graph is uniquely identified by `event_id` (`str`) and stores the complete, intact `AgentEvent` instance under attribute `node_data['event']`.
+- **Edge Representation**: A directed edge is created from `parent_event_id` to `event_id` representing true causal execution lineage.
+- **Core Technology**: `networkx.DiGraph`.
+
+### Core Graph Invariants:
+1. **Invariant 1: One event = one node** (Node identity = `event_id`).
+2. **Invariant 2: Stable identity** (`event_id` is the immutable key across all operations).
+3. **Invariant 3: Parent integrity** (No fabricated parents; missing parent triggers `GraphBuildError`).
+4. **Invariant 4: Real relationships only** (Edge = `parent_event_id -> event_id`).
+5. **Invariant 5: Original AgentEvent preservation** (The complete, un-truncated event model is preserved).
+6. **Invariant 6: Deterministic execution** (Identical event input produces identical graph topology).
+7. **Invariant 7: No security semantics** (Pure structural representation; no vulnerability scoring).
+
+## 8. P1.1 — Execution Graph Foundation: DONE
+
+Phase 1.1 is officially closed and verified.
+
+- **AgentEvent Contract Compliance**: The graph builder consumes `app.events.schemas.AgentEvent` directly from P3.
+- **P1 ↔ P3 Boundary Integrity**: P1 does NOT own event ingestion or storage. `backend/app/graph/` contains zero database/SQLAlchemy/SQLite dependencies and zero HTTP/FastAPI coupling.
+- **Determinism & Forensic Validation**: Guaranteed by explicit list sorting across all traversal functions and strict 7-point structural verification in `validate_execution_graph`.
+- **Scope Compliance**: Zero security detection, LLMs, risk scores, or future Phase 1.2+ scope leaked into P1.1.
+- **Test Coverage**: 47 total automated unit and integration tests passing in `<0.4s`.
+
+---
+
+## 9. P1.2 Detection Architecture & Contracts
+
+Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the security contract between P1.1 (Execution Graph) and P2 (Understand / Featherless Reasoning Layer).
+
+### Architectural Contracts
+- **Input**: `ExecutionGraph` (`networkx.DiGraph`) constructed by P1.1.
+- **Output**: `List[DetectionFinding]` containing structured forensic facts.
+- **Detector Types**: `INDIRECT_PROMPT_INJECTION`, `TOOL_ABUSE`, `PRIVILEGE_VIOLATION`, `DATA_EXFILTRATION`.
+- **Severity Levels**: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` (deterministic policy violation weight, NOT an LLM score).
+- **Confidence**: Floating point value (0.0 to 1.0) indicating rule condition satisfaction score.
+
+### Evidence Separation Principle
+`DetectionFinding` explicitly separates deterministic forensic facts (`event_ids`, `evidence`, `graph_path`) from detector interpretation (`title`, `description`). This guarantees that P2 (Featherless) consumes immutable forensic evidence.
+
+---
+
+## Implementation Changelog
+
+### [Phase 1.1 - Task 1] Workspace Setup & Repository Contract Inspection
+- **Branch Setup**: Checked repository branches; created and switched to `backend` branch from `main`.
+- **Knowledge Base**: Created `blackbox_knowledge_base.md` documenting core problem, architecture, deterministic principles, event contracts, phase scope, and team boundaries.
+- **Repository Inspection**: Performed complete repository audit comparing existing codebase structure against the target architecture.
+
+### [Phase 1.1 - Task 2] Define Graph Data Model, Invariants & Contracts
+- **Dependency Update**: Added `networkx>=3.0` to root `requirements.txt`.
+- **Graph Models & Invariants**: Created `backend/app/graph/models.py` defining `GraphBuildError`, `GraphValidationError`, `GraphPath`, and the 7 Core Graph Invariants.
+- **Builder & Traversal Contracts**: Defined explicit signatures, return types, and docstrings in `backend/app/graph/builder.py` and `backend/app/graph/traversal.py`. Exported all contracts via `backend/app/graph/__init__.py`.
+- **Knowledge Base Update**: Appended Execution Graph Data Model specification and updated `Implementation Changelog`.
+
+### [Phase 1.1 - Task 3] Implement Execution Graph Builder
+- **Graph Builder**: Implemented `build_execution_graph(events: list[AgentEvent]) -> nx.DiGraph` in `backend/app/graph/builder.py`.
+- **Two-Pass Construction**: Pass 1 adds nodes with uniqueness checks; Pass 2 connects directed edges with parent existence checks.
+- **Guarantees**: Ensures input order independence, supports multiple roots and branching traces, and preserves intact `AgentEvent` objects on nodes.
+- **Pytest Unit Tests**: Created `backend/tests/test_graph_builder.py`.
+
+### [Phase 1.1 - Task 4] Implement Deterministic Graph Traversal
+- **Traversal Utilities**: Implemented structural graph navigation functions in `backend/app/graph/traversal.py`.
+- **Determinism & Validation Guarantees**: Explicitly sorts all returned sets of event IDs alphabetically to eliminate non-deterministic set ordering. Validates node presence prior to traversal.
+- **Pytest Unit Tests**: Created `backend/tests/test_graph_traversal.py`.
+
+### [Phase 1.1 - Task 5] Implement Forensic Graph Validation & Integrity
+- **Validation Module**: Created `backend/app/graph/validation.py` implementing `validate_execution_graph(events: list[AgentEvent], graph: nx.DiGraph) -> bool`.
+- **Pytest Unit Tests**: Created `backend/tests/test_graph_validation.py`.
+
+### [Phase 1.1 - Tasks 6 & 7] Integration Test Suite & Final Boundary Audit
+- **End-to-End Integration Tests**: Created `backend/tests/test_graph_integration.py`.
+- **Architectural Boundary Audit**: Verified zero DB/API leakage.
+- **Phase Closure**: Appended Section 8 closing Phase 1.1 in `blackbox_knowledge_base.md`.
+
+### [Phase 1.2.1] Define Detection Engine Architecture & Contracts
+- **Detection Models & Enums**: Created `backend/app/detection/models.py` defining `DetectorType`, `Severity`, `DetectionFinding`, `DetectionError`, and `DetectionContractError`.
+- **Interfaces & Engine**: Created `backend/app/detection/interfaces.py` (`BaseDetector`) and `backend/app/detection/engine.py` (`DetectionEngine`).
+- **Pytest Contract Suite**: Created `backend/tests/test_detection_contracts.py`.
+
+### [Phase 1.2.2] Implement Indirect Prompt Injection Detector
+- **Prompt Injection Detector**: Created `backend/app/detection/detectors/prompt_injection.py` implementing `PromptInjectionDetector(BaseDetector)`.
+- **Pytest Detector Suite**: Created `backend/tests/test_prompt_injection.py`.
+
+### [Phase 1.2.3] Implement Tool Abuse & Privilege Violation Detector
+- **Privilege Detector**: Created `backend/app/detection/detectors/privilege_violation.py` implementing `PrivilegeViolationDetector(BaseDetector)`.
+- **Pytest Detector Suite**: Created `backend/tests/test_privilege_violation.py`.
+
+### [Phase 1.2.4] Implement Data Exfiltration Detector
+- **Data Exfiltration Detector**: Created `backend/app/detection/detectors/data_exfiltration.py` implementing `DataExfiltrationDetector(BaseDetector)`.
+- **Deterministic Lineage Rule**:
+  - **Sensitive Data Access**: Identifies `DATA_ACCESS`/`RETRIEVAL` nodes with metadata classification `HIGH`/`CRITICAL` or sensitive resource naming (`"sensitive"`, `"critical"`, `"pii"`, `"secret"`, `"credentials"`, `"financial"`). Ignores `LOW`/`PUBLIC` data.
+  - **Downstream Lineage Traversal**: Uses `nx.descendants(graph, s_node)` and `nx.has_path(graph, s_node, d_node)` to trace directed paths to downstream `ACTION`/`TOOL_CALL`/`EXTERNAL_REQUEST` boundary nodes.
+  - **Exfiltration Boundary Trigger**: Flags finding if the downstream target is `UNTRUSTED`/`EXTERNAL` (or HTTP endpoint/`export` action).
+  - **Finding Construction**: Emits `DetectionFinding` with `confidence=1.0`, severity mapped to resource sensitivity (`CRITICAL` vs `HIGH`), complete `graph_path`, and detailed `evidence` dictionary.
+- **Pytest Detector Suite**: Created `backend/tests/test_data_exfiltration.py` covering True Positives (exfil path), True Negatives (public data), True Negatives (internal move), True Negatives (disconnected branches), and multi-run Determinism (5 test functions, 68 total suite tests passing in 0.38s).
+- **Knowledge Base Update**: Documented Task P1.2.4 completion and rule definition in `Implementation Changelog`.
+
+### [Phase 1.2.5] Detection Engine Integration & Orchestration
+- **Engine Orchestrator**: Updated `backend/app/detection/engine.py` to automatically register `PromptInjectionDetector`, `PrivilegeViolationDetector`, and `DataExfiltrationDetector` by default using strict relative imports.
+- **Input & Error Contracts**:
+  - `graph is None` raises `DetectionError("Execution graph cannot be None")`.
+  - `len(graph.nodes) == 0` returns `[]`.
+- **Deterministic Multi-Detector Aggregation & Sorting**:
+  - Aggregates findings across all registered detectors.
+  - Sorts final findings deterministically using a multi-key tuple:
+    1. **Severity Priority**: `CRITICAL` (0) > `HIGH` (1) > `MEDIUM` (2) > `LOW` (3).
+    2. **Detector Type**: `detector_type.value` lexicographically.
+    3. **Finding ID**: `finding_id` lexicographically.
+    4. **Primary Event ID**: `event_ids[0]` (if present).
+- **Pytest Engine Suite**: Created `backend/tests/test_detection_engine.py` with 5 tests (`test_empty_and_none_graph`, `test_clean_graph_no_attacks`, `test_single_detector_trigger`, `test_multiple_detectors_trigger`, `test_engine_determinism_multiple_runs`). Total test suite: 73 passed in 0.39s.
+
+### [Phase 1.2.6] Detection Test Suite & Final Verification
+- **Integration Scenario Matrix**: Created `backend/tests/test_detection_scenarios.py` implementing 9 end-to-end integration test suites:
+  1. `test_scenario_a_normal_rag`: Validates 0 findings for safe retrieval and response.
+  2. `test_scenario_b_prompt_injection`: Validates `INDIRECT_PROMPT_INJECTION` detection.
+  3. `test_scenario_c_tool_privilege_abuse`: Validates `PRIVILEGE_VIOLATION` detection.
+  4. `test_scenario_d_data_exfiltration`: Validates `DATA_EXFILTRATION` detection.
+  5. `test_scenario_combined_kill_chain`: Validates multi-detector attack kill chain triggering across detectors while preserving exact evidence paths.
+  6. `test_false_positives_matrix`: Validates zero false positives for authorized tool usage, internal sensitive data transfers, and benign external API calls.
+  7. `test_branching_and_multiroot_isolation`: Validates that findings isolate events to malicious branches and single session boundaries.
+  8. `test_event_order_independence`: Validates 100% output determinism regardless of input event shuffling.
+  9. `test_evidence_integrity`: Validates every finding event ID and graph path node exists in `graph.nodes`.
+- **Regression Suite Verification**: All 82 automated tests across P1.1 and P1.2 pass cleanly in 0.41s.
+- **Detector Refinement**: Added `data_classification` metadata key lookup in `DataExfiltrationDetector`.
+
+---
+
+## 10. P1.2 — Deterministic Detection Engine: DONE
+
+Phase 1.2 is officially closed, integrated, and verified.
+
+### Supported Detection Types
+1. **`INDIRECT_PROMPT_INJECTION`**: Flags untrusted context retrievals (`UNTRUSTED` / `EXTERNAL`) that flow through an agent `DECISION` node into a privileged action/tool call or contain override keywords.
+2. **`PRIVILEGE_VIOLATION` / `TOOL_ABUSE`**: Flags actions or tool calls whose required capability level exceeds the agent's declared or upstream-granted permission context based on the hierarchy `NONE (0) < READ (1) < WRITE (2) < EXECUTE (3) < EXPORT (4) < ADMIN/PRIVILEGED (5)`.
+3. **`DATA_EXFILTRATION`**: Traces directed lineage paths from sensitive data access (`HIGH` / `CRITICAL` metadata classification or sensitive keyword resource naming) to downstream external/untrusted boundary nodes.
+
+### Forensic Evidence Requirements
+- **Separation of Facts from Reasoning**: Immutable forensic evidence (`event_ids`, `evidence`, `graph_path`) is strictly separated from detector titles/descriptions for consumption by downstream Phase 2 LLM reasoning.
+- **Complete Path Preservation**: Every finding preserves the exact directed shortest path from threat origin to impact node.
+
+### Known Limitations
+- **Structural Attack Pattern MVP**: The detection engine is a deterministic rule engine operating on execution graph structure and metadata. It is NOT a universal AI anomaly detector or ML classifier.
+- **LLM Independence**: Zero LLMs, Featherless APIs, or external heuristic engines are called during detection execution. Semantic narrative synthesis and incident root-cause analysis are explicitly delegated to Phase 2.
+
+## 11. P2.2 — Understand / Featherless Investigation
+
+P2.2 consumes, but does not establish, deterministic security facts. Its
+frozen input contract is `IncidentAnalysis`
+(`backend/app/contracts/incident_analysis.py`), mirrored by
+`contracts/incident_analysis.json`. P1 remains authoritative for events,
+paths, permissions, resources, severity, blast radius, and evidence.
+
+The Understand pipeline is:
+
+```text
+IncidentAnalysis -> build_prompt_evidence() -> FeatherlessClient.analyze()
+-> Investigation
+```
+
+`FeatherlessClient` uses the OpenAI-compatible Featherless endpoint only in
+`backend/app/understand/featherless/client.py`. Responses are parsed as the
+structured `Investigation` schema. P2.2 validates every response-referenced
+event ID against the supplied evidence; malformed JSON, invalid schema,
+unavailable credentials, transport/API errors, and failed provenance checks
+raise `FeatherlessError` and route through the deterministic fallback.
+
+The fallback produces an `Investigation` solely from confirmed P1 evidence
+and explicitly marks AI explanation unavailable. It never invents security
+facts or changes `IncidentAnalysis`. The `/investigate` route invokes this
+framework-agnostic investigator layer; the Understand modules do not import
+FastAPI.
+
+`IncidentAnalysis`, `PermissionFact`, `SensitiveResource`, and `BlastRadius`
+are frozen at the P1-to-P2 boundary so P2 and the LLM cannot overwrite
+deterministic P1 facts. The P2.2 test suite covers contract/schema behavior,
+evidence provenance, malformed Featherless output, deterministic fallback,
+investigator behavior, and the investigate API.
+
