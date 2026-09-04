@@ -19,6 +19,10 @@ export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = (
     setActiveItem(activeNavItem);
   }, [activeNavItem]);
 
+  useEffect(() => {
+    document.title = "RedBlue Security Operations";
+  }, []);
+
   const handleNavClick = (item: string) => {
     setActiveItem(item);
     if (onNavItemClick) {
@@ -63,55 +67,57 @@ export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = (
   ];
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
       {/* Sidebar Left */}
-      <aside className="w-60 shrink-0 border-r border-slate-200 bg-white flex flex-col justify-between">
+      <aside className="w-64 shrink-0 border-r border-slate-200 bg-white flex flex-col justify-between">
         <div>
           {/* Brand Logo Header */}
-          <div className="h-14 px-4 flex items-center space-x-3 border-b border-slate-200">
-            <div className="w-7 h-7 rounded-xs bg-slate-900 text-white flex items-center justify-center font-mono font-bold text-xs shadow-2xs">
-              BB
+          <div className="h-16 px-4 flex items-center space-x-3 border-b border-slate-200">
+            <div className="w-8 h-8 rounded-xs bg-slate-900 text-white flex items-center justify-center font-mono font-bold text-xs shadow-2xs">
+              <span className="text-red-500 font-bold">RE</span>
+              <span className="text-blue-500 font-bold">B</span>
             </div>
             <div>
-              <div className="text-xs font-bold tracking-tight text-slate-900 uppercase font-mono">
-                BLACKBOX
+              <div className="text-base font-extrabold tracking-tight uppercase font-mono flex items-center">
+                <span className="text-red-600">REB</span>
+                <span className="text-blue-600">LUE</span>
               </div>
-              <div className="text-[10px] font-mono text-slate-500 tracking-wider">
+              <div className="text-[11px] font-mono text-slate-500 tracking-wider">
                 SOC ENGINE v1.4
               </div>
             </div>
           </div>
 
           {/* Navigation Links */}
-          <nav className="p-3 space-y-6 overflow-y-auto">
+          <nav className="p-3.5 space-y-6 overflow-y-auto">
             {navGroupings.map((group) => (
               <div key={group.group}>
-                <div className="px-2 mb-1.5 text-[10px] font-mono font-bold tracking-widest text-slate-400 uppercase">
+                <div className="px-2 mb-2 text-xs font-mono font-bold tracking-widest text-slate-400 uppercase">
                   {group.group}
                 </div>
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   {group.items.map((item) => {
                     const isActive = activeItem === item.name;
                     return (
                       <button
                         key={item.name}
                         onClick={() => handleNavClick(item.name)}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xs text-xs font-medium transition-colors cursor-pointer ${
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xs text-sm font-medium transition-colors cursor-pointer ${
                           isActive
-                            ? "bg-blue-50 text-blue-700 font-semibold border-r-2 border-blue-600"
-                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                            ? "bg-blue-50 text-blue-700 font-bold border-r-2 border-blue-600"
+                            : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
                         }`}
                       >
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs">{item.icon}</span>
+                        <div className="flex items-center space-x-2.5">
+                          <span className="text-sm">{item.icon}</span>
                           <span>{item.name}</span>
                         </div>
                         {item.count !== undefined && (
                           <span
-                            className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] ${
+                            className={`px-2 py-0.5 rounded-full font-mono text-xs ${
                               isActive
-                                ? "bg-blue-600 text-white"
-                                : "bg-slate-200 text-slate-700"
+                                ? "bg-blue-600 text-white font-bold"
+                                : "bg-slate-200 text-slate-700 font-semibold"
                             }`}
                           >
                             {item.count}
@@ -127,14 +133,14 @@ export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = (
         </div>
 
         {/* Sidebar Footer System Status */}
-        <div className="p-3 border-t border-slate-200 bg-slate-50/50">
-          <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
+        <div className="p-4 border-t border-slate-200 bg-slate-50/60 font-mono">
+          <div className="flex items-center justify-between text-xs text-slate-600 font-semibold">
             <span>DETECTOR</span>
-            <span className="text-emerald-600 font-medium">ONLINE</span>
+            <span className="text-emerald-600 font-bold">ONLINE</span>
           </div>
-          <div className="flex items-center justify-between text-xs text-slate-500 font-mono mt-1">
+          <div className="flex items-center justify-between text-xs text-slate-600 font-semibold mt-1.5">
             <span>FEATHERLESS</span>
-            <span className="text-emerald-600 font-medium">CONNECTED</span>
+            <span className="text-emerald-600 font-bold">CONNECTED</span>
           </div>
         </div>
       </aside>
@@ -142,10 +148,12 @@ export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = (
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
         {/* Topbar Header */}
-        <header className="h-14 shrink-0 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-10 shadow-2xs">
+        <header className="h-16 shrink-0 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-10 shadow-2xs">
           <div className="flex items-center space-x-4">
-            <h1 className="text-sm font-bold text-slate-900 uppercase tracking-tight font-mono">
-              BLACKBOX Security Operations
+            <h1 className="text-base font-extrabold uppercase tracking-tight font-mono flex items-center space-x-1">
+              <span className="text-red-600">REB</span>
+              <span className="text-blue-600">LUE</span>
+              <span className="text-slate-900 ml-2">Security Operations</span>
             </h1>
             <span className="h-4 w-px bg-slate-200" />
             <div className="flex items-center space-x-2 text-xs font-mono">
@@ -153,7 +161,7 @@ export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = (
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
               </span>
-              <span className="text-emerald-700 font-semibold uppercase tracking-wider text-[11px]">
+              <span className="text-emerald-700 font-bold uppercase tracking-wider text-xs">
                 ● LIVE MONITORING
               </span>
             </div>
@@ -161,10 +169,10 @@ export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = (
 
           {/* Topbar Right Controls */}
           <div className="flex items-center space-x-4">
-            <div className="text-xs font-mono text-slate-500 bg-slate-100 px-2.5 py-1 rounded-xs border border-slate-200">
-              CLUSTER: <span className="text-slate-900 font-semibold">US-EAST-SOC</span>
+            <div className="text-xs font-mono text-slate-600 bg-slate-100 px-3 py-1 rounded-xs border border-slate-200 font-semibold">
+              CLUSTER: <span className="text-slate-900 font-bold">US-EAST-SOC</span>
             </div>
-            <div className="text-xs font-mono text-slate-500">
+            <div className="text-xs font-mono text-slate-500 font-semibold">
               AGENT TELEMETRY STREAM
             </div>
           </div>

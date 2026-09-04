@@ -45,31 +45,31 @@ export const IncidentHeader: React.FC<IncidentHeaderProps> = ({
         </div>
       </div>
 
-      {/* Metadata Row (Monospace, small text) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-xs text-slate-600 bg-slate-50/70 p-2.5 rounded-xs border border-slate-200/60">
+      {/* Metadata Row (Monospace, readable text) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-xs text-slate-600 bg-slate-50/70 p-3 rounded-xs border border-slate-200/60">
         <div>
-          <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
+          <span className="text-slate-500 block text-xs uppercase font-bold tracking-wider mb-0.5">
             Target Agent
           </span>
-          <span className="font-semibold text-slate-900">{agentId}</span>
+          <span className="font-bold text-slate-900 text-xs">{agentId}</span>
         </div>
         <div>
-          <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
+          <span className="text-slate-500 block text-xs uppercase font-bold tracking-wider mb-0.5">
             Session Reference
           </span>
-          <span className="font-semibold text-slate-900">{sessionId}</span>
+          <span className="font-bold text-slate-900 text-xs">{sessionId}</span>
         </div>
         <div>
-          <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
+          <span className="text-slate-500 block text-xs uppercase font-bold tracking-wider mb-0.5">
             Incident ID
           </span>
-          <span className="font-semibold text-slate-900">{incidentId}</span>
+          <span className="font-bold text-slate-900 text-xs">{incidentId}</span>
         </div>
         <div>
-          <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
+          <span className="text-slate-500 block text-xs uppercase font-bold tracking-wider mb-0.5">
             Primary Threat Vector
           </span>
-          <span className="font-semibold text-red-700">
+          <span className="font-bold text-red-700 text-xs">
             INDIRECT PROMPT INJECTION
           </span>
         </div>

@@ -110,7 +110,7 @@ export const IncidentView: React.FC = () => {
     } catch (err: any) {
       setError(
         err.message ||
-          "ERROR: Connection to BLACKBOX Core lost. Ensure backend FastAPI server is active."
+          "ERROR: Connection to RedBlue Core lost. Ensure backend FastAPI server is active."
       );
     } finally {
       setLoading(false);
@@ -244,7 +244,7 @@ export const IncidentView: React.FC = () => {
         <div className="p-8 bg-red-50 border border-red-300 rounded-sm font-mono space-y-4 max-w-3xl mx-auto shadow-sm">
           <div className="flex items-center space-x-3 text-red-900 font-bold text-base">
             <span className="px-2 py-0.5 bg-red-800 text-white rounded-xs text-xs">CRITICAL ERROR</span>
-            <span>ERROR: Connection to BLACKBOX Core lost</span>
+            <span>ERROR: Connection to RedBlue Core lost</span>
           </div>
           <p className="text-xs text-red-800 font-sans leading-relaxed">{error}</p>
           <div className="pt-2 flex items-center space-x-3">
@@ -272,34 +272,34 @@ export const IncidentView: React.FC = () => {
           {/* Top Operational Status Header */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-xs">
             <Card className="bg-white">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
-                System Status
+              <span className="text-slate-500 block text-xs uppercase font-bold tracking-wider mb-0.5">
+                RedBlue Status
               </span>
-              <span className="font-bold text-emerald-600 text-sm mt-1 block">
+              <span className="font-bold text-emerald-600 text-sm mt-0.5 block">
                 ● LIVE OPERATIONAL
               </span>
             </Card>
             <Card className="bg-white">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
+              <span className="text-slate-500 block text-xs uppercase font-bold tracking-wider mb-0.5">
                 Detector Status
               </span>
-              <span className="font-bold text-slate-900 text-sm mt-1 block">
+              <span className="font-bold text-slate-900 text-sm mt-0.5 block">
                 ONLINE (P1 Engine)
               </span>
             </Card>
             <Card className="bg-white">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
+              <span className="text-slate-500 block text-xs uppercase font-bold tracking-wider mb-0.5">
                 Featherless LLM
               </span>
-              <span className="font-bold text-slate-900 text-sm mt-1 block">
+              <span className="font-bold text-slate-900 text-sm mt-0.5 block">
                 CONNECTED (P2.2)
               </span>
             </Card>
             <Card className="bg-white">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
+              <span className="text-slate-500 block text-xs uppercase font-bold tracking-wider mb-0.5">
                 Active Incidents
               </span>
-              <span className="font-bold text-blue-600 text-sm mt-1 block">
+              <span className="font-bold text-blue-600 text-sm mt-0.5 block">
                 {incidents.length} Generated
               </span>
             </Card>
@@ -307,9 +307,12 @@ export const IncidentView: React.FC = () => {
 
           {/* Hero Demo Control Card */}
           <div className="bg-white border border-slate-200 rounded-sm p-8 shadow-sm space-y-6 text-center">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full font-mono text-xs text-blue-700 font-semibold">
-              <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
-              <span>BLACKBOX AGENT OPERATIONAL CENTER</span>
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-slate-900 border border-slate-800 rounded-full font-mono text-xs text-white font-semibold">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+              <span>
+                <strong className="text-red-500 font-extrabold">REB</strong>
+                <strong className="text-blue-500 font-extrabold">LUE</strong> AGENT OPERATIONAL CENTER
+              </span>
             </div>
 
             <div className="space-y-2">
