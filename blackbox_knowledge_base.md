@@ -233,6 +233,22 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
 - **Regression Suite Verification**: All 82 automated tests across P1.1 and P1.2 pass cleanly in 0.41s.
 - **Detector Refinement**: Added `data_classification` metadata key lookup in `DataExfiltrationDetector`.
 
+### [Phase 1.4.1] IncidentAnalysis Adapter
+- **Adapter Module**: Created `backend/app/adapter/incident_adapter.py` implementing `build_incident_analysis(graph, findings, impact)` and `AdapterValidationError`. Exported via `backend/app/adapter/__init__.py`.
+- **Deterministic Fact Mapping**:
+  - `incident_id`: Derived deterministically using `hashlib.sha256(session_id:agent_id:finding_ids)`.
+  - `agent_id` / `session_id`: Extracted directly from underlying `AgentEvent` objects in `graph.nodes`.
+  - `incident_type`: Formatted from unique `detector_type` values of triggering findings.
+  - `severity`: Computed as max deterministic weight across findings and reached sensitive resources (`CRITICAL` > `HIGH` > `MEDIUM` > `LOW`).
+  - `events`: Deduplicated list of `AgentEvent` payloads extracted from the graph.
+  - `attack_path`: Unified ordered path built from graph relationships (`parent_event_id` -> `event_id`).
+  - `permissions`: `PermissionFact` objects populated for permission-relevant events on attack path.
+  - `sensitive_resources`: Reached `SensitiveResource` instances extracted from AEGIS impact results.
+  - `blast_radius`: Extracted and merged from AEGIS impact results.
+  - `evidence`: Tagged `EvidenceItem` list combining findings and impact evidence.
+- **Strict Validation**: Rejects `None` or empty graphs, missing node references, or ungrounded graph edges by raising `AdapterValidationError`.
+
+
 ---
 
 ## 10. P1.2 — Deterministic Detection Engine: DONE
