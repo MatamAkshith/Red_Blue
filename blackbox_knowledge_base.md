@@ -289,6 +289,13 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
 - **Safe Metadata Merging**: Merges arbitrary raw payload kwargs into `metadata` without overwriting core `AgentEvent` schema fields.
 - **Observer Integration**: Integrated `normalize_event()` into `BlackboxObserver._create_event()` so all observer callbacks automatically pass through strict normalization and validation.
 
+### [Task 3 - Future Protection Memory] Deterministic Protection Pattern Matching
+- **Protection Signal Schema**: Created `backend/app/memory/protection.py` defining `ProtectionSignal` (`matched`, `pattern_signature`, `prior_incident_id`, `prior_session_id`, `recommendation`). Exported via `backend/app/memory/__init__.py`.
+- **Deterministic Pattern Matching**: Implemented `check_future_protection(incident_analysis, pattern_store)` which extracts findings/impacts or computes signature directly from `IncidentAnalysis` using the existing `compute_signature()` function.
+- **Offline & No-LLM Requirement**: Queries `FailurePatternStore.recall()` deterministically without calling LLMs or external heuristic services.
+- **Strict Advisory Principle**: Provides historical provenance context (`prior_incident_id`, `prior_session_id`) and risk signals without overriding P1 security facts, AEGIS blast radius, or `IncidentAnalysis`.
+
+
 
 
 
