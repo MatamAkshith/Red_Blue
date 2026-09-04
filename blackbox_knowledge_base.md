@@ -208,13 +208,16 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
 - **Phase Closure**: Appended Section 8 closing Phase 1.1 in `blackbox_knowledge_base.md`.
 
 ### [Phase 1.2.1] Define Detection Engine Architecture & Contracts
-- **Detection Models & Enums**: Created `backend/app/detection/models.py` defining:
-  - `DetectorType` Enum (`INDIRECT_PROMPT_INJECTION`, `TOOL_ABUSE`, `PRIVILEGE_VIOLATION`, `DATA_EXFILTRATION`)
-  - `Severity` Enum (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL` - deterministic policy weights)
-  - `DetectionFinding` Pydantic model (separating deterministic facts `event_ids`, `evidence`, `graph_path` from interpretation)
-  - Exception classes `DetectionError` and `DetectionContractError`
-- **Interfaces & Engine**: Created `backend/app/detection/interfaces.py` (`BaseDetector` ABC) and `backend/app/detection/engine.py` (`DetectionEngine` orchestrator).
-  - Implemented graph validation (`None` graph raises `DetectionError`, empty graph returns `[]`).
-  - Implemented stable, deterministic findings sorting (Severity priority descending $\rightarrow$ finding_id $\rightarrow$ primary event_id).
-- **Pytest Contract Suite**: Created `backend/tests/test_detection_contracts.py` covering model instantiation, field validation, deterministic serialization, engine registration, empty/invalid graph handling, and multi-run output determinism (6 test functions, 53 total suite tests passing in 0.35s).
-- **Knowledge Base Update**: Added Section 9 (Detection Architecture) and updated `Implementation Changelog`.
+- **Detection Models & Enums**: Created `backend/app/detection/models.py` defining `DetectorType`, `Severity`, `DetectionFinding`, `DetectionError`, and `DetectionContractError`.
+- **Interfaces & Engine**: Created `backend/app/detection/interfaces.py` (`BaseDetector`) and `backend/app/detection/engine.py` (`DetectionEngine`).
+- **Pytest Contract Suite**: Created `backend/tests/test_detection_contracts.py` (6 tests passing).
+
+### [Phase 1.2.2] Implement Indirect Prompt Injection Detector
+- **Prompt Injection Detector**: Created `backend/app/detection/detectors/prompt_injection.py` implementing `PromptInjectionDetector(BaseDetector)`.
+- **Deterministic Detection Rule**:
+  - **Untrusted Entry**: Finds context retrieval nodes (`RETRIEVAL`) with untrusted/external origin (`trust_level` in `UNTRUSTED`, `EXTERNAL` or source `untrusted`/`external`).
+  - **Lineage Traversal**: Traces downstream descendants using `nx.descendants(graph, r_node)` to find decision nodes (`DECISION`).
+  - **Suspicious Action Evaluation**: Traces decision node descendants to find action/tool nodes (`ACTION`, `TOOL_CALL`). Flags finding if the downstream action is privileged (`permission` in `privileged`/`admin`/`execute`/`export`/`write` or `action` in `write`/`execute`/`export`/`delete`) OR if metadata contains explicit injection keywords (`"ignore previous instructions"`, `"override"`, `"system prompt"`, `"jailbreak"`, `"disregard"`).
+  - **Finding Construction**: Emits `DetectionFinding` with `confidence=1.0`, `severity=HIGH`, exact `event_ids=[r_node, d_node, t_node]`, shortest path `graph_path`, and detailed `evidence` dictionary.
+- **Pytest Detector Suite**: Created `backend/tests/test_prompt_injection.py` covering True Positives (behavioral), True Negatives (normal RAG), True Negatives (harmless external), Branching Isolation, and multi-run Determinism (5 test functions, 58 total suite tests passing in 0.35s).
+- **Knowledge Base Update**: Documented Task P1.2.2 completion and rule definition in `Implementation Changelog`.

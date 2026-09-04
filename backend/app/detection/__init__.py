@@ -1,3 +1,4 @@
+from .detectors import PromptInjectionDetector
 from .engine import DetectionEngine
 from .interfaces import BaseDetector
 from .models import (
@@ -15,5 +16,6 @@ __all__ = [
     "DetectionError",
     "DetectionFinding",
     "DetectorType",
+    "PromptInjectionDetector",
     "Severity",
 ]
