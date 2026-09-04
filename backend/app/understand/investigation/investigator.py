@@ -1,14 +1,42 @@
-"""Investigator — orchestrates evidence -> prompt -> Featherless ->
-Investigation, falling back to app.understand.fallback.deterministic when
-Featherless is unavailable so Blackbox never crashes without it.
+"""Investigator — orchestrates the full P1 -> P2 pipeline:
 
-STUB: not yet implemented.
+    IncidentAnalysis -> evidence extractor -> structured evidence
+    -> investigation prompt -> FeatherlessClient -> Investigation
+
+Framework-agnostic: nothing here imports FastAPI or any web framework.
+Callers (an API route, a CLI, a test) just call investigate(incident).
+
+Falls back to app.understand.fallback.deterministic whenever Featherless is
+unavailable -- missing/invalid API key, network failure, timeout, or a
+response that fails schema validation -- so Blackbox never crashes just
+because the LLM is unreachable.
 """
 
 from __future__ import annotations
 
+from app.contracts.incident_analysis import IncidentAnalysis
+from app.core.config import Settings, get_settings
+from app.understand.evidence.extractor import build_prompt_evidence
+from app.understand.fallback.deterministic import fallback_investigation
+from app.understand.featherless.client import FeatherlessClient, FeatherlessError
 from app.understand.investigation.schemas import Investigation
 
 
-def investigate(evidence: dict) -> Investigation:
-    raise NotImplementedError("investigator: not yet implemented")
+def investigate(
+    incident: IncidentAnalysis,
+    *,
+    settings: Settings | None = None,
+    client: FeatherlessClient | None = None,
+) -> Investigation:
+    """Run one incident through the P1 -> P2 pipeline. `settings` and
+    `client` are optional injection points for tests; normal callers just
+    pass `incident`."""
+
+    settings = settings or get_settings()
+    evidence = build_prompt_evidence(incident)
+
+    try:
+        featherless = client or FeatherlessClient(settings)
+        return featherless.analyze(evidence)
+    except FeatherlessError:
+        return fallback_investigation(evidence)

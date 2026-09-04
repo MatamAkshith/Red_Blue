@@ -1,6 +1,13 @@
-"""Structured investigation contract returned by Featherless (or the
+"""Structured investigation output returned by Featherless (or the
 deterministic fallback in app.understand.fallback). This is the stable
-schema the frontend and the rest of Blackbox depend on.
+contract the frontend and the rest of Blackbox depend on.
+
+The model is NOT the security authority -- it never establishes whether an
+event happened, whether a resource is reachable, or blast radius; that all
+comes in as already-determined fact via the P1 -> P2 IncidentAnalysis
+contract (app.contracts.incident_analysis). Its job is only to interpret
+that evidence: explain why the incident happened, reconstruct the
+narrative, and point at the evidence backing each claim.
 """
 
 from __future__ import annotations
@@ -13,15 +20,29 @@ class CriticalDecision(BaseModel):
     explanation: str
 
 
-class SupportingEvidenceItem(BaseModel):
+class EvidenceInterpretation(BaseModel):
+    """What one piece of supplied evidence means, in the model's reading --
+    never a new fact, only an interpretation of a fact it was given."""
+
     event_id: str
-    reason: str
+    interpretation: str
+
+
+class FailurePatternCandidate(BaseModel):
+    """An abstracted, reusable pattern for future detection -- the
+    technology-specific incident changes, the underlying failure shape
+    tends to repeat."""
+
+    pattern_name: str
+    description: str
+    indicators: list[str] = Field(default_factory=list)
 
 
 class Investigation(BaseModel):
     root_cause: str
-    critical_decision: CriticalDecision
     attack_narrative: str
-    supporting_evidence: list[SupportingEvidenceItem] = Field(default_factory=list)
-    recommendation: str
+    critical_decision: CriticalDecision
+    evidence_interpretation: list[EvidenceInterpretation] = Field(default_factory=list)
     confidence: float
+    contributing_factors: list[str] = Field(default_factory=list)
+    failure_pattern_candidate: FailurePatternCandidate | None = None
