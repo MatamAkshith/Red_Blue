@@ -1,17 +1,23 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 interface SecurityDashboardLayoutProps {
   children: React.ReactNode;
   activeNavItem?: string;
   onNavItemClick?: (item: string) => void;
+  incidentsCount?: number;
 }
 
 export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = ({
   children,
-  activeNavItem = "Incidents",
+  activeNavItem = "Overview",
   onNavItemClick,
+  incidentsCount = 0,
 }) => {
   const [activeItem, setActiveItem] = useState(activeNavItem);
+
+  useEffect(() => {
+    setActiveItem(activeNavItem);
+  }, [activeNavItem]);
 
   const handleNavClick = (item: string) => {
     setActiveItem(item);
@@ -25,7 +31,11 @@ export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = (
       group: "OPERATIONS",
       items: [
         { name: "Overview", icon: "📊" },
-        { name: "Incidents", icon: "🚨", count: 1 },
+        {
+          name: "Incidents",
+          icon: "🚨",
+          count: incidentsCount > 0 ? incidentsCount : undefined,
+        },
       ],
     },
     {
@@ -168,3 +178,4 @@ export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = (
     </div>
   );
 };
+
