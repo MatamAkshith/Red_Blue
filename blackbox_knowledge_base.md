@@ -263,6 +263,14 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
 - **Comprehensive Unit & Integration Suite**: Created `backend/tests/test_incident_adapter.py` with 9 automated tests verifying field mapping, multi-finding path merging, multi-impact aggregation, severity priority, determinism across 50 runs, schema revalidation, and full end-to-end integration (`P1 outputs → build_incident_analysis → IncidentAnalysis → P2.2 investigate()`).
 - **Regression Suite Verification**: 267 total automated tests across P1.1-P1.4 and P2.2 pass cleanly in 1.68s.
 
+### [Phase 1.4.4] Orchestrator Integration
+- **Pipeline Wiring**: Integrated `build_incident_analysis` adapter into central `run_pipeline` function in `backend/app/orchestrator.py`, linking Phase 1 (Deterministic Detection & Impact) directly to Phase 2 (Featherless Investigation).
+- **Graceful Fallback**: Wrapped Phase 2 `investigate()` call in exception handler trapping `FeatherlessError` and generic errors to invoke `fallback_investigation()`, ensuring pipeline resilience without failing the report generation.
+- **Fact Preservation**: `IncidentReport` updated to include both `incident_analysis` and `investigation`, preserving Phase 1 deterministic findings, severity, and blast radius without allowing Phase 2 LLM output to overwrite hard facts.
+- **Scenario Determinism**: Updated `backend/app/scenarios/exfiltration.py` base timestamp to ensure 100% trace determinism across repeated runs.
+- **Pytest Suite**: Created `backend/tests/test_pipeline_orchestrator.py` with 3 end-to-end integration tests (`test_orchestrator_end_to_end_success`, `test_p1_fact_preservation`, `test_featherless_fallback_graceful_degradation`). 270 total tests passing.
+
+
 
 ---
 
