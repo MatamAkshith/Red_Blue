@@ -276,6 +276,13 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
 - **Featherless Down Fallback Assertion**: Validates that when Featherless API raises `FeatherlessError`, the orchestrator gracefully degrades to deterministic fallback without crashing, producing hard facts (attack path, event IDs, severity, blast radius, findings) 100% identical to the happy path.
 - **Regression Suite Pass**: 272 automated unit and integration tests passing in <3.0s.
 
+### [Task 1 - Observe Layer] SDK Observer Implementation
+- **Observer Module**: Created `backend/app/sdk/observer.py` implementing `BlackboxObserver(session_id, agent_id)`. Exported via `backend/app/sdk/__init__.py`.
+- **Neutral Stateful Collector**: The observer acts strictly as a neutral event collector without making security decisions, detecting malicious activity, or invoking LLMs.
+- **Causality & Lineage Tracking**: Maintains internal `current_parent_id` state tracking across event lifecycle callbacks (`on_input`, `on_retrieval`, `on_decision`, `on_tool_call`, `on_tool_result`, `on_action`), generating deterministic event IDs (`E1`, `E2`, ...) and automatically linking child events to establish causal execution lineages.
+- **Contract Adherence**: Strictly constructs standard `AgentEvent` objects using existing schemas and `EventType`/`TrustLevel` enums.
+
+
 
 
 
