@@ -193,8 +193,12 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
     }
   };
 
-  const getThreatBorder = (level: string, isSelected: boolean): string => {
-    const base = isSelected ? "ring-2 ring-blue-500 scale-[1.02]" : "";
+  const getThreatBorder = (level: string, isSelected: boolean, hasSelection: boolean): string => {
+    const base = isSelected
+      ? "ring-2 ring-blue-600 scale-[1.04] z-20 shadow-md bg-white opacity-100"
+      : hasSelection
+      ? "opacity-60 hover:opacity-100 hover:scale-[1.02] hover:z-10 transition-all duration-200"
+      : "hover:scale-[1.02] transition-all duration-200";
     switch (level) {
       case "Malicious":
         return `border-l-4 border-l-red-600 border-red-200 bg-white ${base}`;
@@ -212,13 +216,16 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
     if (!node) return null;
 
     const isSelected = activeSelectedId === node.id;
+    const hasSelection = Boolean(activeSelectedId);
+
     return (
       <div
         key={node.id}
         onClick={() => handleCardClick(node)}
-        className={`w-48 p-3 rounded-xs border shadow-2xs cursor-pointer transition-all duration-150 relative ${getThreatBorder(
+        className={`w-48 p-3 rounded-xs border shadow-2xs cursor-pointer transition-all duration-200 relative ${getThreatBorder(
           node.threatLevel,
-          isSelected
+          isSelected,
+          hasSelection
         )}`}
       >
         <div className="flex items-center justify-between mb-1.5">
@@ -283,8 +290,8 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
                 viewBox="0 0 10 10"
                 refX="8"
                 refY="5"
-                markerWidth="6"
-                markerHeight="6"
+                markerWidth="7"
+                markerHeight="7"
                 orient="auto-start-reverse"
               >
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626" />
@@ -294,8 +301,8 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
                 viewBox="0 0 10 10"
                 refX="8"
                 refY="5"
-                markerWidth="6"
-                markerHeight="6"
+                markerWidth="7"
+                markerHeight="7"
                 orient="auto-start-reverse"
               >
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b" />
@@ -313,38 +320,41 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
               </marker>
             </defs>
 
-            {/* Line E1 -> E2 */}
+            {/* Line E1 -> E2 (Attack path edge) */}
             <line
               x1="220"
               y1="90"
               x2="260"
               y2="90"
               stroke="#f59e0b"
-              strokeWidth="2"
-              strokeDasharray="4 2"
+              strokeWidth="3.5"
+              strokeDasharray="5 3"
               markerEnd="url(#arrow-amber)"
+              className="transition-all duration-200"
             />
 
-            {/* Line E2 -> E3 */}
+            {/* Line E2 -> E3 (Bold Attack Path Edge) */}
             <line
               x1="465"
               y1="90"
               x2="505"
               y2="90"
               stroke="#dc2626"
-              strokeWidth="2.5"
+              strokeWidth="3.5"
               markerEnd="url(#arrow-red)"
+              className="transition-all duration-200"
             />
 
-            {/* Main Attack Line E3 -> E5 */}
+            {/* Main Attack Line E3 -> E5 (Bold Attack Path Edge) */}
             <line
               x1="710"
               y1="90"
               x2="750"
               y2="90"
               stroke="#dc2626"
-              strokeWidth="2.5"
+              strokeWidth="3.5"
               markerEnd="url(#arrow-red)"
+              className="transition-all duration-200"
             />
 
             {/* Branch Line E3 -> E4 (downwards branch) */}
@@ -355,28 +365,31 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
               strokeWidth="2"
               strokeDasharray="3 3"
               markerEnd="url(#arrow-green)"
+              className="transition-all duration-200"
             />
 
-            {/* Line E5 -> E6 */}
+            {/* Line E5 -> E6 (Bold Attack Path Edge) */}
             <line
               x1="955"
               y1="90"
               x2="995"
               y2="90"
               stroke="#dc2626"
-              strokeWidth="2.5"
+              strokeWidth="3.5"
               markerEnd="url(#arrow-red)"
+              className="transition-all duration-200"
             />
 
-            {/* Line E6 -> E7 */}
+            {/* Line E6 -> E7 (Bold Attack Path Edge) */}
             <line
               x1="1200"
               y1="90"
               x2="1240"
               y2="90"
               stroke="#dc2626"
-              strokeWidth="2.5"
+              strokeWidth="3.5"
               markerEnd="url(#arrow-red)"
+              className="transition-all duration-200"
             />
           </svg>
 
