@@ -104,7 +104,7 @@ const DEFAULT_MOCK_NODES: Record<string, ExecutionNodeData> = {
     threatLevel: "Malicious",
     trustLevel: "UNTRUSTED",
     source: "agent",
-    target: "https://attacker-exfil.com",
+    target: "https://external-drop.example.com/upload",
     action: "http_post",
     detail: "Agent posts sensitive customer PII to external untrusted destination.",
     parentId: "E6",
@@ -335,12 +335,12 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
               </marker>
             </defs>
 
-            {/* Line E1 -> E2 (Attack path edge) */}
+            {/* Line E1 -> E2 (Untrusted Data Flow Edge) */}
             <line
-              x1="220"
-              y1="90"
+              x1="228"
+              y1="85"
               x2="260"
-              y2="90"
+              y2="85"
               stroke="#f59e0b"
               strokeWidth="3.5"
               strokeDasharray="5 3"
@@ -350,57 +350,59 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
 
             {/* Line E2 -> E3 (Bold Attack Path Edge) */}
             <line
-              x1="465"
-              y1="90"
-              x2="505"
-              y2="90"
+              x1="452"
+              y1="85"
+              x2="504"
+              y2="85"
               stroke="#dc2626"
               strokeWidth="3.5"
               markerEnd="url(#arrow-red)"
               className="transition-all duration-200"
             />
 
-            {/* Main Attack Line E3 -> E5 (Bold Attack Path Edge) */}
+            {/* Branch Line E3 -> E4 (Benign downward branch) */}
             <line
-              x1="710"
-              y1="90"
-              x2="750"
-              y2="90"
-              stroke="#dc2626"
-              strokeWidth="3.5"
-              markerEnd="url(#arrow-red)"
-              className="transition-all duration-200"
-            />
-
-            {/* Branch Line E3 -> E4 (downwards branch) */}
-            <path
-              d="M 600,140 C 600,200 550,220 465,220"
-              fill="none"
+              x1="600"
+              y1="145"
+              x2="600"
+              y2="205"
               stroke="#10b981"
-              strokeWidth="2"
-              strokeDasharray="3 3"
+              strokeWidth="2.5"
+              strokeDasharray="4 3"
               markerEnd="url(#arrow-green)"
               className="transition-all duration-200"
             />
 
-            {/* Line E5 -> E6 (Bold Attack Path Edge) */}
+            {/* Line E3 -> E5 (Attack Causal Edge) */}
             <line
-              x1="955"
-              y1="90"
-              x2="995"
-              y2="90"
+              x1="696"
+              y1="85"
+              x2="748"
+              y2="85"
               stroke="#dc2626"
               strokeWidth="3.5"
               markerEnd="url(#arrow-red)"
               className="transition-all duration-200"
             />
 
-            {/* Line E6 -> E7 (Bold Attack Path Edge) */}
+            {/* Line E5 -> E6 (Downstream Impact Edge) */}
             <line
-              x1="1200"
-              y1="90"
-              x2="1240"
-              y2="90"
+              x1="940"
+              y1="85"
+              x2="980"
+              y2="85"
+              stroke="#dc2626"
+              strokeWidth="3.5"
+              markerEnd="url(#arrow-red)"
+              className="transition-all duration-200"
+            />
+
+            {/* Line E6 -> E7 (Exfiltration Edge) */}
+            <line
+              x1="1172"
+              y1="85"
+              x2="1212"
+              y2="85"
               stroke="#dc2626"
               strokeWidth="3.5"
               markerEnd="url(#arrow-red)"
@@ -409,7 +411,7 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
           </svg>
 
           {/* Node Container Layout */}
-          <div className="relative z-10 flex items-start space-x-10 py-4 min-w-[1450px]">
+          <div className="relative z-10 flex items-start space-x-10 py-4 pr-12 min-w-[1460px]">
             {/* Dashed Untrusted Boundary Box (E1 & E2) */}
             <div className="relative border-2 border-dashed border-amber-300 bg-amber-50/30 p-3 rounded-md flex space-x-8">
               <div className="absolute -top-3 left-4 bg-amber-100 border border-amber-300 text-amber-900 font-mono text-[10px] font-bold px-2 py-0.5 rounded-xs tracking-wider uppercase flex items-center space-x-1">
@@ -420,11 +422,11 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
             </div>
 
             {/* Decision Node E3 & Branch E4 */}
-            <div className="flex flex-col space-y-12">
+            <div className="flex flex-col space-y-10">
               <div>{renderNodeCard("E3")}</div>
 
               {/* Branch Node E4 */}
-              <div className="pt-2 pl-4">
+              <div className="pt-2">
                 <div className="text-[10px] font-mono text-emerald-700 font-semibold mb-1 uppercase tracking-wider flex items-center space-x-1">
                   <span>↪ BENIGN BRANCH</span>
                 </div>
@@ -432,18 +434,14 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
               </div>
             </div>
 
-            {/* Malicious Attack Chain: E5 -> E6 -> E7 */}
-            <div className="flex items-center space-x-10">
+            {/* AEGIS Blast Radius / Downstream Impact Boundary (E5 -> E6 -> E7) */}
+            <div className="relative border-2 border-dashed border-red-300 bg-red-50/20 p-3 rounded-md flex space-x-10">
+              <div className="absolute -top-3 left-4 bg-red-100 border border-red-300 text-red-900 font-mono text-[10px] font-bold px-2 py-0.5 rounded-xs tracking-wider uppercase flex items-center space-x-1">
+                <span>💥 AEGIS IMPACT BOUNDARY (EXFILTRATION CHAIN)</span>
+              </div>
               <div>{renderNodeCard("E5")}</div>
               <div>{renderNodeCard("E6")}</div>
-
-              {/* Exfiltration Boundary Impact Node E7 */}
-              <div className="relative border-2 border-red-300 bg-red-50/30 p-2 rounded-md">
-                <div className="absolute -top-3 left-3 bg-red-100 border border-red-300 text-red-900 font-mono text-[10px] font-bold px-2 py-0.5 rounded-xs tracking-wider uppercase">
-                  💥 IMPACT BOUNDARY
-                </div>
-                {renderNodeCard("E7")}
-              </div>
+              <div>{renderNodeCard("E7")}</div>
             </div>
           </div>
         </div>

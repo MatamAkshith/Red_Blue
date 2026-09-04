@@ -30,9 +30,24 @@ export const AnalysisPanels: React.FC<AnalysisPanelsProps> = ({
       case "MEDIUM":
         return "warning";
       case "LOW":
-        return "success";
+        return "neutral";
       default:
         return "info";
+    }
+  };
+
+  const getSeverityCardStyle = (severity: string): string => {
+    switch (severity?.toUpperCase()) {
+      case "CRITICAL":
+        return "bg-red-50/70 border-red-200 border-l-4 border-l-red-600";
+      case "HIGH":
+        return "bg-rose-50/70 border-rose-200 border-l-4 border-l-rose-500";
+      case "MEDIUM":
+        return "bg-amber-50/70 border-amber-200 border-l-4 border-l-amber-500";
+      case "LOW":
+        return "bg-slate-50 border-slate-200 border-l-4 border-l-slate-400";
+      default:
+        return "bg-slate-50 border-slate-200 border-l-4 border-l-slate-300";
     }
   };
 
@@ -57,7 +72,9 @@ export const AnalysisPanels: React.FC<AnalysisPanelsProps> = ({
                 return (
                   <div
                     key={finding.finding_id}
-                    className="p-3.5 bg-white border border-slate-200 rounded-xs space-y-2.5 shadow-2xs hover:border-slate-300 transition-colors"
+                    className={`p-3.5 rounded-xs space-y-2.5 shadow-2xs hover:shadow-xs transition-all ${getSeverityCardStyle(
+                      finding.severity
+                    )}`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
@@ -80,13 +97,13 @@ export const AnalysisPanels: React.FC<AnalysisPanelsProps> = ({
                       {finding.description}
                     </p>
 
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100 text-[11px] font-mono">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200/60 text-[11px] font-mono">
                       <div className="flex items-center space-x-1 text-slate-600">
-                        <span className="text-slate-400 font-bold">ATTACK PATH:</span>
+                        <span className="text-slate-500 font-bold">ATTACK PATH:</span>
                         {finding.graph_path && finding.graph_path.length > 0 ? (
                           finding.graph_path.map((ev, i) => (
                             <span key={ev} className="flex items-center space-x-1">
-                              <code className="bg-slate-100 px-1 py-0.2 rounded-xs text-slate-900 font-bold border border-slate-200">
+                              <code className="bg-white/80 px-1 py-0.2 rounded-xs text-slate-900 font-bold border border-slate-300/60">
                                 {ev}
                               </code>
                               {i < finding.graph_path.length - 1 && <span>➔</span>}
@@ -129,45 +146,25 @@ export const AnalysisPanels: React.FC<AnalysisPanelsProps> = ({
         {/* AEGIS Blast Radius Panel */}
         <Card
           title="AEGIS BLAST RADIUS & IMPACT ANALYSIS"
-          subtitle="Determines Compromised Data & Boundary Exposure"
+          subtitle="Graph Blast-Radius Computation & Downstream Resource Exposure"
         >
           <div className="space-y-4">
-            {/* Risk Score Highlight Header */}
-            <div className="flex items-center justify-between p-3.5 bg-slate-900 text-white rounded-xs font-mono">
-              <div>
-                <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">
-                  Blast Radius Risk Score
-                </span>
-                <span className="text-xl font-bold text-red-400">
-                  {blastRadius?.risk_score !== undefined
-                    ? blastRadius.risk_score.toFixed(1)
-                    : "8.5"}{" "}
-                  / 10.0
-                </span>
+            {/* Visual Blast Radius Chain */}
+            <div className="p-3.5 bg-slate-900 rounded-xs text-white font-mono text-xs space-y-3">
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center justify-between">
+                <span>IMPACT EXPOSURE LINEAGE</span>
+                <Badge variant="critical">RISK SCORE: {blastRadius?.risk_score ?? 0.95}</Badge>
               </div>
-              <Badge variant="critical">CRITICAL BLAST RADIUS</Badge>
-            </div>
 
-            {/* Impact Diagram Flow */}
-            <div className="p-3.5 bg-slate-900/90 text-white rounded-xs font-mono text-xs space-y-2 border border-slate-800">
-              <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-                IMPACT LINEAGE FLOW DIAGRAM
-              </div>
-              <div className="flex flex-col md:flex-row items-center justify-between gap-2 pt-1 text-[11px]">
-                <div className="p-2 bg-slate-800 rounded-xs border border-slate-700 text-center w-full md:w-auto">
-                  <div className="text-[9px] text-slate-400">INCIDENT TRACE</div>
-                  <div className="font-bold text-amber-400">E1 ➔ E7</div>
+              <div className="flex flex-wrap items-center gap-2 text-center text-xs">
+                <div className="p-2 bg-slate-800 rounded-xs border border-amber-800 text-center w-full md:w-auto">
+                  <div className="text-[9px] text-slate-400">UNTRUSTED ENTRY</div>
+                  <div className="font-bold text-amber-300">RAG Context (E2)</div>
                 </div>
                 <span className="text-slate-500">➔</span>
-                <div className="p-2 bg-slate-800 rounded-xs border border-amber-900/80 text-center w-full md:w-auto">
-                  <div className="text-[9px] text-slate-400">EXPOSED ASSETS</div>
-                  <div className="font-bold text-amber-300">
-                    {sensitiveList.length > 0
-                      ? typeof sensitiveList[0] === "string"
-                        ? sensitiveList[0]
-                        : sensitiveList[0].resource || "customer_pii"
-                      : "customer_pii"}
-                  </div>
+                <div className="p-2 bg-slate-800 rounded-xs border border-red-900 text-center w-full md:w-auto">
+                  <div className="text-[9px] text-slate-400">EXPLOITED TOOL</div>
+                  <div className="font-bold text-red-300">CRM Export (E5)</div>
                 </div>
                 <span className="text-slate-500">➔</span>
                 <div className="p-2 bg-slate-800 rounded-xs border border-red-900/80 text-center w-full md:w-auto">
@@ -177,8 +174,8 @@ export const AnalysisPanels: React.FC<AnalysisPanelsProps> = ({
                 <span className="text-slate-500">➔</span>
                 <div className="p-2 bg-slate-800 rounded-xs border border-red-800 text-center w-full md:w-auto">
                   <div className="text-[9px] text-slate-400">DESTINATION</div>
-                  <div className="font-bold text-red-300 truncate max-w-[120px]">
-                    {externalList[0] || "attacker-exfil.com"}
+                  <div className="font-bold text-red-300 truncate max-w-[140px]">
+                    {externalList[0] || "https://external-drop.example.com/upload"}
                   </div>
                 </div>
               </div>

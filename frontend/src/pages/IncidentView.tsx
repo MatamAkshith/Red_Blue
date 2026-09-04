@@ -863,8 +863,13 @@ export const IncidentView: React.FC = () => {
                 <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                   PROPOSED INTERVENTION CANDIDATE
                 </div>
-                <div className="font-bold text-slate-900">
-                  BLOCK_EXTERNAL_DESTINATION (https://attacker-exfil.com)
+                <div className="font-bold text-slate-900 font-mono">
+                  BLOCK_EXTERNAL_DESTINATION (
+                  {currentIncident?.blast_radius?.reachable_external_destinations?.[0] ||
+                    currentIncident?.intervention?.selected?.value ||
+                    currentIncident?.events?.find((e) => e.target)?.target ||
+                    "https://external-drop.example.com/upload"}
+                  )
                 </div>
                 <p className="text-[11px] text-slate-600 font-sans pt-1">
                   Evaluates counterfactual execution over the graph trace without mutating historical telemetry events.
