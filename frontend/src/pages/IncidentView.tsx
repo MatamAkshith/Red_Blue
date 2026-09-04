@@ -54,12 +54,28 @@ export const IncidentView: React.FC = () => {
   const [loadingDefense, setLoadingDefense] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // In-app Notification Toast State
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  // What-If Modal State
+  const [showWhatIfModal, setShowWhatIfModal] = useState<boolean>(false);
+  const [simulating, setSimulating] = useState<boolean>(false);
+  const [modalSimResult, setModalSimResult] = useState<any | null>(null);
+
   // Dynamic incident state source
   const [incidents, setIncidents] = useState<IncidentResponse[]>([]);
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [rawEvents, setRawEvents] = useState<AgentEvent[]>([]);
   const [, setKnownResources] = useState<SensitiveResource[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<AgentEvent | null>(null);
+
+  // Auto dismiss toast notification
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // Sync window hash location changes
   useEffect(() => {
@@ -105,6 +121,11 @@ export const IncidentView: React.FC = () => {
         setSelectedEvent(res.events.find((e) => e.event_id === "E3") || res.events[0]);
       }
 
+      setToast({
+        message: "Demo attack executed successfully. Incident trace E1-E7 analyzed.",
+        type: "success",
+      });
+
       // Automatically switch to Execution view to inspect generated incident
       navigateTo("Execution");
     } catch (err: any) {
@@ -112,16 +133,67 @@ export const IncidentView: React.FC = () => {
         err.message ||
           "ERROR: Connection to RedBlue Core lost. Ensure backend FastAPI server is active."
       );
+      setToast({
+        message: "Failed to execute demo attack. Core server unreachable.",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const currentIncident =
-    incidents.find((i) => (i.incident_info?.incident_id || i.incident?.incident_id) === selectedIncidentId) ||
+    incidents.find(
+      (i) => (i.incident_info?.incident_id || i.incident?.incident_id) === selectedIncidentId
+    ) ||
     incidents[0] ||
     null;
 
+  // Real Incident Report Export (.json file download)
+  const handleExportReport = () => {
+    if (!currentIncident) {
+      setToast({ message: "No active incident selected for report export.", type: "error" });
+      return;
+    }
+
+    const incId =
+      currentIncident.incident_info?.incident_id ||
+      currentIncident.incident?.incident_id ||
+      "INC-DEMO-1";
+
+    const exportData = {
+      export_title: "RedBlue Security Operations Incident Report",
+      export_version: "1.4",
+      export_timestamp: new Date().toISOString(),
+      incident_id: incId,
+      incident: currentIncident,
+    };
+
+    try {
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `redblue-incident-${incId}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setToast({
+        message: `Incident report "redblue-incident-${incId}.json" exported successfully.`,
+        type: "success",
+      });
+    } catch (err: any) {
+      setToast({
+        message: `Failed to export incident report: ${err.message}`,
+        type: "error",
+      });
+    }
+  };
+
+  // Real Defense Application
   const handleApplyDefense = async () => {
     if (!rawEvents.length || !currentIncident) return;
     setLoadingDefense(true);
@@ -160,18 +232,41 @@ export const IncidentView: React.FC = () => {
             : inc
         )
       );
+
+      setToast({
+        message: "Defense applied and verified via CHIMERA engine.",
+        type: "success",
+      });
     } catch (err: any) {
-      alert(`Failed to apply defense: ${err.message}`);
+      setToast({
+        message: `Failed to apply defense: ${err.message}`,
+        type: "error",
+      });
     } finally {
       setLoadingDefense(false);
     }
   };
 
-  const handleSimulateWhatIf = async () => {
+  // Open What-If Modal
+  const handleOpenWhatIfModal = () => {
+    if (!currentIncident) {
+      setToast({ message: "No active incident selected for What-If simulation.", type: "error" });
+      return;
+    }
+    setModalSimResult(null);
+    setShowWhatIfModal(true);
+  };
+
+  // Execute What-If Simulation inside Modal
+  const handleExecuteWhatIfSimulation = async () => {
     if (!rawEvents.length || !currentIncident) return;
+    setSimulating(true);
     try {
       const incidentId = currentIncident.incident_info?.incident_id || "INC-DEMO-1";
       const simResult = await simulateIntervention(incidentId, rawEvents);
+
+      setModalSimResult(simResult);
+
       if (simResult.selected_intervention) {
         const updatedInc: IncidentResponse = {
           ...currentIncident,
@@ -190,11 +285,18 @@ export const IncidentView: React.FC = () => {
           )
         );
       }
-      alert(
-        `[WHAT-IF SIMULATION COMPLETE]\nStatus: ${simResult.status}\nEvaluated Candidates: ${simResult.evaluated_simulations.length}\nSelected Intervention: ${simResult.selected_intervention?.description}`
-      );
+
+      setToast({
+        message: "What-If counterfactual simulation completed.",
+        type: "success",
+      });
     } catch (err: any) {
-      alert(`Simulation error: ${err.message}`);
+      setToast({
+        message: `Simulation error: ${err.message}`,
+        type: "error",
+      });
+    } finally {
+      setSimulating(false);
     }
   };
 
@@ -514,14 +616,8 @@ export const IncidentView: React.FC = () => {
           sessionId={incidentInfo?.session_id || "S-DEMO-1"}
           severity={incidentInfo?.severity || "CRITICAL"}
           status={verification?.defense_verified ? "DEFENSE VERIFIED" : "ACTIVE THREAT"}
-          onSimulateClick={handleSimulateWhatIf}
-          onExportClick={() =>
-            alert(
-              `Exporting full JSON payload for Incident ${
-                incidentInfo?.incident_id || "INC-DEMO-1"
-              }`
-            )
-          }
+          onSimulateClick={handleOpenWhatIfModal}
+          onExportClick={handleExportReport}
         />
 
         {/* Section Sub-Navigation Tabs */}
@@ -572,12 +668,12 @@ export const IncidentView: React.FC = () => {
                 <table className="w-full text-left font-mono text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 uppercase text-[10px]">
-                      <th className="py-2 px-3">Event ID</th>
-                      <th className="py-2 px-3">Type</th>
-                      <th className="py-2 px-3">Source</th>
-                      <th className="py-2 px-3">Target</th>
-                      <th className="py-2 px-3">Resource / Action</th>
-                      <th className="py-2 px-3">Trust Level</th>
+                      <th className="py-2.5 px-3">Event ID</th>
+                      <th className="py-2.5 px-3">Type</th>
+                      <th className="py-2.5 px-3">Source</th>
+                      <th className="py-2.5 px-3">Target</th>
+                      <th className="py-2.5 px-3">Resource / Action</th>
+                      <th className="py-2.5 px-3">Trust Level</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -589,14 +685,14 @@ export const IncidentView: React.FC = () => {
                           selectedEvent?.event_id === ev.event_id ? "bg-blue-50/60 font-semibold" : ""
                         }`}
                       >
-                        <td className="py-2 px-3 font-bold text-slate-900">{ev.event_id}</td>
-                        <td className="py-2 px-3">
+                        <td className="py-2.5 px-3 font-bold text-slate-900">{ev.event_id}</td>
+                        <td className="py-2.5 px-3">
                           <Badge variant="neutral">{ev.event_type}</Badge>
                         </td>
-                        <td className="py-2 px-3 text-slate-700">{ev.source}</td>
-                        <td className="py-2 px-3 text-slate-600">{ev.target || "N/A"}</td>
-                        <td className="py-2 px-3 text-slate-800">{ev.resource || ev.action || "N/A"}</td>
-                        <td className="py-2 px-3">
+                        <td className="py-2.5 px-3 text-slate-700">{ev.source}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{ev.target || "N/A"}</td>
+                        <td className="py-2.5 px-3 text-slate-800">{ev.resource || ev.action || "N/A"}</td>
+                        <td className="py-2.5 px-3">
                           <Badge
                             variant={
                               ev.trust_level === "UNTRUSTED"
@@ -657,7 +753,7 @@ export const IncidentView: React.FC = () => {
             memoryPattern={memoryPattern}
             patternSignature={currentIncident.pattern_signature}
             onApplyDefense={handleApplyDefense}
-            onSimulateClick={handleSimulateWhatIf}
+            onSimulateClick={handleOpenWhatIfModal}
             loadingDefense={loadingDefense}
           />
         )}
@@ -669,7 +765,7 @@ export const IncidentView: React.FC = () => {
             memoryPattern={memoryPattern}
             patternSignature={currentIncident.pattern_signature}
             onApplyDefense={handleApplyDefense}
-            onSimulateClick={handleSimulateWhatIf}
+            onSimulateClick={handleOpenWhatIfModal}
             loadingDefense={loadingDefense}
           />
         )}
@@ -681,7 +777,7 @@ export const IncidentView: React.FC = () => {
             memoryPattern={memoryPattern}
             patternSignature={currentIncident.pattern_signature}
             onApplyDefense={handleApplyDefense}
-            onSimulateClick={handleSimulateWhatIf}
+            onSimulateClick={handleOpenWhatIfModal}
             loadingDefense={loadingDefense}
           />
         )}
@@ -693,7 +789,7 @@ export const IncidentView: React.FC = () => {
             memoryPattern={memoryPattern}
             patternSignature={currentIncident.pattern_signature}
             onApplyDefense={handleApplyDefense}
-            onSimulateClick={handleSimulateWhatIf}
+            onSimulateClick={handleOpenWhatIfModal}
             loadingDefense={loadingDefense}
           />
         )}
@@ -710,6 +806,122 @@ export const IncidentView: React.FC = () => {
       onNavItemClick={navigateTo}
       incidentsCount={incidents.length}
     >
+      {/* Toast Notification Banner */}
+      {toast && (
+        <div
+          className={`fixed top-4 right-6 z-50 p-3.5 rounded-xs font-mono text-xs shadow-lg border flex items-center space-x-3 transition-all duration-200 ${
+            toast.type === "success"
+              ? "bg-slate-900 text-emerald-400 border-emerald-500"
+              : toast.type === "error"
+              ? "bg-red-900 text-white border-red-500"
+              : "bg-slate-900 text-white border-slate-700"
+          }`}
+        >
+          <span>{toast.type === "success" ? "✓" : "⚠️"}</span>
+          <span>{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="text-slate-400 hover:text-white font-bold ml-2 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* In-App What-If Counterfactual Modal Dialog */}
+      {showWhatIfModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-sm shadow-2xl max-w-xl w-full font-mono overflow-hidden space-y-0">
+            {/* Modal Header */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center space-x-2">
+                <span className="text-blue-400 font-bold">🔮</span>
+                <span className="font-bold text-sm uppercase tracking-wider">
+                  WHAT-IF COUNTERFACTUAL SIMULATION
+                </span>
+              </div>
+              <button
+                onClick={() => setShowWhatIfModal(false)}
+                className="text-slate-400 hover:text-white text-base font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 text-xs">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xs space-y-1">
+                <div className="text-[10px] text-blue-900 font-bold uppercase tracking-wider">
+                  TARGET INCIDENT
+                </div>
+                <div className="text-sm font-bold text-slate-900">
+                  {currentIncident?.incident_info?.incident_id || "INC-DEMO-1"}
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xs space-y-1">
+                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                  PROPOSED INTERVENTION CANDIDATE
+                </div>
+                <div className="font-bold text-slate-900">
+                  BLOCK_EXTERNAL_DESTINATION (https://attacker-exfil.com)
+                </div>
+                <p className="text-[11px] text-slate-600 font-sans pt-1">
+                  Evaluates counterfactual execution over the graph trace without mutating historical telemetry events.
+                </p>
+              </div>
+
+              {simulating && (
+                <div className="p-4 bg-slate-900 text-slate-200 rounded-xs flex items-center justify-center space-x-3">
+                  <div className="w-5 h-5 rounded-full border-2 border-slate-400 border-t-blue-500 animate-spin" />
+                  <span className="text-xs">Executing counterfactual pipeline over backend...</span>
+                </div>
+              )}
+
+              {modalSimResult && (
+                <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xs space-y-2">
+                  <div className="flex items-center justify-between text-emerald-950 font-bold">
+                    <span>STATUS: {modalSimResult.status || "SIMULATED"}</span>
+                    <Badge variant="success">✓ EXFILTRATION PATH SEVERED</Badge>
+                  </div>
+                  <div className="text-slate-800 text-[11px] font-sans">
+                    Intervention tested:{" "}
+                    <strong>
+                      {modalSimResult.selected_intervention?.description ||
+                        "Block external destination rule"}
+                    </strong>
+                  </div>
+                  <div className="text-slate-700 text-[11px]">
+                    Evaluated candidate count:{" "}
+                    <strong>{modalSimResult.evaluated_simulations?.length || 1}</strong>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end space-x-3">
+              <button
+                onClick={() => setShowWhatIfModal(false)}
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-xs font-bold text-xs cursor-pointer"
+              >
+                {modalSimResult ? "Close" : "Cancel"}
+              </button>
+
+              {!modalSimResult && (
+                <button
+                  onClick={handleExecuteWhatIfSimulation}
+                  disabled={simulating}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xs font-bold text-xs cursor-pointer"
+                >
+                  {simulating ? "Simulating..." : "▶ Run Simulation"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {renderContent()}
     </SecurityDashboardLayout>
   );

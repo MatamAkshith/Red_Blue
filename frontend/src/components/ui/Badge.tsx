@@ -33,15 +33,15 @@ export const Badge: React.FC<BadgeProps> = ({
   };
 
   const variantStyles: Record<BadgeVariant, string> = {
-    critical: "bg-red-50 text-red-700 border-red-200/80 shadow-2xs",
-    malicious: "bg-red-50 text-red-700 border-red-300 shadow-2xs",
-    warning: "bg-amber-50 text-amber-800 border-amber-300 shadow-2xs",
-    suspicious: "bg-amber-50 text-amber-800 border-amber-300 shadow-2xs",
-    success: "bg-emerald-50 text-emerald-700 border-emerald-300 shadow-2xs",
-    benign: "bg-emerald-50 text-emerald-700 border-emerald-300 shadow-2xs",
-    info: "bg-blue-50 text-blue-700 border-blue-200 shadow-2xs",
-    neutral: "bg-slate-100 text-slate-700 border-slate-200 shadow-2xs",
-    "outline-critical": "bg-transparent text-red-700 border-red-500/80 font-bold",
+    critical: "bg-red-600 text-white border-red-700 font-extrabold shadow-2xs",
+    malicious: "bg-rose-600 text-white border-rose-700 font-bold shadow-2xs",
+    warning: "bg-amber-500 text-slate-950 border-amber-600 font-bold shadow-2xs",
+    suspicious: "bg-amber-500 text-slate-950 border-amber-600 font-bold shadow-2xs",
+    success: "bg-emerald-600 text-white border-emerald-700 font-bold shadow-2xs",
+    benign: "bg-emerald-600 text-white border-emerald-700 font-bold shadow-2xs",
+    info: "bg-blue-600 text-white border-blue-700 font-bold shadow-2xs",
+    neutral: "bg-slate-100 text-slate-700 border-slate-300 font-semibold shadow-2xs",
+    "outline-critical": "bg-red-50 text-red-700 border-2 border-red-600 font-extrabold",
   };
 
   return (
