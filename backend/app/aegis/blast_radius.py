@@ -1,7 +1,9 @@
-"""AEGIS — impact intelligence: deterministic reachability and blast radius.
+"""Deterministic resource sensitivity weights.
 
-STUB: not yet implemented. Severity weights are frozen per the spec; do not
-let an LLM compute these values.
+`Severity` is the shared sensitivity vocabulary used by the P1->P2
+contracts (`app.contracts.incident_analysis`) and by AEGIS impact
+analysis. Blast radius itself is computed by `app.aegis.engine`; there is
+no second blast-radius policy in this codebase.
 """
 
 from __future__ import annotations
@@ -14,7 +16,3 @@ class Severity(IntEnum):
     INTERNAL = 3
     SENSITIVE = 7
     CRITICAL = 10
-
-
-def compute_blast_radius(execution_graph, compromised_node) -> dict:
-    raise NotImplementedError("AEGIS blast radius: not yet implemented")
