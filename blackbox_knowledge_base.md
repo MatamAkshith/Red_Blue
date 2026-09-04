@@ -172,39 +172,19 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
 - **Knowledge Base Update**: Documented Task 3 completion and architectural guarantees in `Implementation Changelog`.
 
 ### [Phase 1.1 - Task 4] Implement Deterministic Graph Traversal
-- **Traversal Utilities**: Implemented structural graph navigation functions in `backend/app/graph/traversal.py`:
-  - `get_root_events(graph: nx.DiGraph) -> list[str]`
-  - `get_leaf_events(graph: nx.DiGraph) -> list[str]`
-  - `get_ancestors(graph: nx.DiGraph, event_id: str) -> list[str]`
-  - `get_descendants(graph: nx.DiGraph, event_id: str) -> list[str]`
-  - `get_execution_path(graph: nx.DiGraph, source: str, target: str) -> GraphPath`
-- **Determinism & Validation Guarantees**:
-  - Explicitly sorts all returned sets of event IDs alphabetically to eliminate non-deterministic set ordering.
-  - Validates node presence prior to traversal; raises `GraphValidationError` if a node does not exist.
-  - Catches `nx.NetworkXNoPath` when no path connects `source` and `target` and raises `GraphValidationError`.
-- **Pytest Unit Tests**: Created `backend/tests/test_graph_traversal.py` covering root/leaf identification, linear/branching ancestors and descendants, multi-root isolation, valid/invalid execution paths, nonexistent node errors, and 100-iteration determinism checks.
+- **Traversal Utilities**: Implemented structural graph navigation functions in `backend/app/graph/traversal.py`.
+- **Determinism & Validation Guarantees**: Explicitly sorts all returned sets of event IDs alphabetically to eliminate non-deterministic set ordering. Validates node presence prior to traversal.
+- **Pytest Unit Tests**: Created `backend/tests/test_graph_traversal.py`.
 - **Knowledge Base Update**: Documented Task 4 completion in `Implementation Changelog`.
 
 ### [Phase 1.1 - Task 5] Implement Forensic Graph Validation & Integrity
 - **Validation Module**: Created `backend/app/graph/validation.py` implementing `validate_execution_graph(events: list[AgentEvent], graph: nx.DiGraph) -> bool`.
-- **Structural Integrity Checks**:
-  1. **Node Count**: Ensures number of source events matches node count in `graph`.
-  2. **Node Identity**: Verifies every `event.event_id` exists in `graph`.
-  3. **No Extra Nodes**: Verifies every graph node corresponds to an event in source `events`.
-  4. **Event Preservation & Identity**: Verifies node stores intact `AgentEvent` payload and stored ID matches node ID.
-  5. **Cycle Detection (DAG)**: Verifies `nx.is_directed_acyclic_graph(graph)` is True to prevent infinite execution loops.
-  6. **Parent Edge Correctness & Root Consistency**: Verifies every non-root event has an exact directed edge from its `parent_event_id`, and `parent_event_id=None` nodes have `in_degree==0`.
-  7. **No Unexpected Edges**: Verifies all directed edges `u -> v` are justified by `v`'s `parent_event_id == u`.
 - **Pytest Unit Tests**: Created `backend/tests/test_graph_validation.py` covering 10 scenarios.
 - **Knowledge Base Update**: Documented Task 5 completion in `Implementation Changelog`.
 
 ### [Phase 1.1 - Tasks 6 & 7] Integration Test Suite & Final Boundary Audit
-- **End-to-End Integration Tests**: Created `backend/tests/test_graph_integration.py` testing the full `events -> build_execution_graph -> validate_execution_graph -> traversal` pipeline across 6 scenarios.
-- **Architectural Boundary Audit**:
-  - **Dependency Audit**: Verified `networkx` is the only external dependency. Zero graph DBs, Redis, or Kafka added.
-  - **Storage Isolation Audit**: Verified zero imports of `sqlite3`, `sqlalchemy`, or database models in `backend/app/graph/`.
-  - **HTTP Isolation Audit**: Verified zero imports of `fastapi`, `starlette`, routing, or HTTP exceptions in `backend/app/graph/`.
-- **Final Test Verification**: All 47 suite tests passed in 0.37s.
+- **End-to-End Integration Tests**: Created `backend/tests/test_graph_integration.py`.
+- **Architectural Boundary Audit**: Verified zero DB/API leakage.
 - **Phase Closure**: Appended Section 8 closing Phase 1.1 in `blackbox_knowledge_base.md`.
 
 ### [Phase 1.2.1] Define Detection Engine Architecture & Contracts
@@ -214,10 +194,17 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
 
 ### [Phase 1.2.2] Implement Indirect Prompt Injection Detector
 - **Prompt Injection Detector**: Created `backend/app/detection/detectors/prompt_injection.py` implementing `PromptInjectionDetector(BaseDetector)`.
-- **Deterministic Detection Rule**:
-  - **Untrusted Entry**: Finds context retrieval nodes (`RETRIEVAL`) with untrusted/external origin (`trust_level` in `UNTRUSTED`, `EXTERNAL` or source `untrusted`/`external`).
-  - **Lineage Traversal**: Traces downstream descendants using `nx.descendants(graph, r_node)` to find decision nodes (`DECISION`).
-  - **Suspicious Action Evaluation**: Traces decision node descendants to find action/tool nodes (`ACTION`, `TOOL_CALL`). Flags finding if the downstream action is privileged (`permission` in `privileged`/`admin`/`execute`/`export`/`write` or `action` in `write`/`execute`/`export`/`delete`) OR if metadata contains explicit injection keywords (`"ignore previous instructions"`, `"override"`, `"system prompt"`, `"jailbreak"`, `"disregard"`).
-  - **Finding Construction**: Emits `DetectionFinding` with `confidence=1.0`, `severity=HIGH`, exact `event_ids=[r_node, d_node, t_node]`, shortest path `graph_path`, and detailed `evidence` dictionary.
-- **Pytest Detector Suite**: Created `backend/tests/test_prompt_injection.py` covering True Positives (behavioral), True Negatives (normal RAG), True Negatives (harmless external), Branching Isolation, and multi-run Determinism (5 test functions, 58 total suite tests passing in 0.35s).
-- **Knowledge Base Update**: Documented Task P1.2.2 completion and rule definition in `Implementation Changelog`.
+- **Pytest Detector Suite**: Created `backend/tests/test_prompt_injection.py` (5 tests passing).
+
+### [Phase 1.2.3] Implement Tool Abuse & Privilege Violation Detector
+- **Privilege Detector**: Created `backend/app/detection/detectors/privilege_violation.py` implementing `PrivilegeViolationDetector(BaseDetector)`.
+- **Deterministic Permission Hierarchy**:
+  - `NONE: 0 < READ: 1 < WRITE: 2 < EXECUTE: 3 < EXPORT: 4 < ADMIN: 5` (and `PRIVILEGED: 5`).
+- **Detection Logic**:
+  - Scans `TOOL_CALL` and `ACTION` nodes in `nx.DiGraph`.
+  - Determines declared/granted permission context from node metadata/attributes or upstream ancestor events.
+  - Determines required permission capability from action/tool type (e.g. `write`, `execute`, `delete`, `admin`, `export`).
+  - Flags finding if `required_level > granted_level`.
+  - Severity mapping: gap=1 $\rightarrow$ `MEDIUM`, gap=2 $\rightarrow$ `HIGH`, gap$\ge 3$ $\rightarrow$ `CRITICAL`.
+- **Pytest Detector Suite**: Created `backend/tests/test_privilege_violation.py` covering True Positives (escalation), True Negatives (authorized write), True Negatives (low privilege read), Branching Isolation, and multi-run Determinism (5 test functions, 63 total suite tests passing in 0.35s).
+- **Knowledge Base Update**: Documented Task P1.2.3 completion and rule definition in `Implementation Changelog`.
