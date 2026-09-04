@@ -9,7 +9,9 @@ export type BadgeVariant =
   | "benign"
   | "info"
   | "neutral"
-  | "outline-critical";
+  | "outline-critical"
+  | "trusted"
+  | "untrusted";
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -42,6 +44,8 @@ export const Badge: React.FC<BadgeProps> = ({
     info: "bg-blue-600 text-white border-blue-700 font-bold shadow-2xs",
     neutral: "bg-slate-100 text-slate-700 border-slate-300 font-semibold shadow-2xs",
     "outline-critical": "bg-red-50 text-red-700 border-2 border-red-600 font-extrabold",
+    trusted: "bg-emerald-50 text-emerald-700 border-emerald-300 font-bold shadow-2xs",
+    untrusted: "bg-orange-50 text-orange-800 border-orange-300 font-bold shadow-2xs",
   };
 
   return (

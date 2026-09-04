@@ -16,9 +16,9 @@ export const EventInspectorDrawer: React.FC<EventInspectorDrawerProps> = ({
   const getTrustBadgeVariant = (trust: string): BadgeVariant => {
     switch (trust?.toUpperCase()) {
       case "UNTRUSTED":
-        return "suspicious";
+        return "untrusted";
       case "TRUSTED":
-        return "success";
+        return "trusted";
       default:
         return "neutral";
     }

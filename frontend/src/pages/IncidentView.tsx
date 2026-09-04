@@ -696,9 +696,9 @@ export const IncidentView: React.FC = () => {
                           <Badge
                             variant={
                               ev.trust_level === "UNTRUSTED"
-                                ? "suspicious"
+                                ? "untrusted"
                                 : ev.trust_level === "TRUSTED"
-                                ? "success"
+                                ? "trusted"
                                 : "info"
                             }
                           >
