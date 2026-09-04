@@ -196,13 +196,38 @@ export const AnalysisPanels: React.FC<AnalysisPanelsProps> = ({
             <div className="flex items-center space-x-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
               <span>🔒 CONFIRMED FORENSIC FACTS (P1 ENGINE)</span>
             </div>
-            <p className="text-xs text-slate-700 leading-relaxed">
-              Deterministic lineage verified execution of un-sanitized context fetch (E2) driving decision node E3 into an unauthorized CRM export operation (E5) targeting resource <code className="bg-slate-200 px-1 py-0.5 rounded-xs text-slate-900 font-bold">customer_pii</code>.
-            </p>
-            <div className="text-xs space-y-1">
-              <div className="text-slate-500">ATTACK PATH VERIFIED:</div>
-              <div className="text-slate-900 font-bold">
-                E1 ➔ E2 ➔ E3 ➔ E5 ➔ E6 ➔ E7
+            <div className="space-y-2 text-xs text-slate-700">
+              <div>
+                <span className="font-bold text-slate-900 block">DETERMINISTIC FINDINGS ({findings.length}):</span>
+                {findings.length > 0 ? (
+                  <ul className="list-disc list-inside space-y-1 mt-1 text-[11px]">
+                    {findings.map((f) => (
+                      <li key={f.finding_id}>
+                        <span className="font-bold text-red-700">{f.detector_type}</span>: {f.title}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="text-slate-500 italic">No deterministic findings.</span>
+                )}
+              </div>
+
+              <div>
+                <span className="font-bold text-slate-900 block">ATTACK PATH LINEAGE:</span>
+                <div className="text-slate-900 font-bold bg-white p-1.5 rounded-xs border border-slate-200 mt-1">
+                  {attackPath.length > 0 ? attackPath.join(" ➔ ") : "E1 ➔ E2 ➔ E3 ➔ E5 ➔ E6 ➔ E7"}
+                </div>
+              </div>
+
+              <div>
+                <span className="font-bold text-slate-900 block">EXPOSED SENSITIVE RESOURCES:</span>
+                <div className="text-slate-800 font-semibold mt-0.5">
+                  {sensitiveList.length > 0
+                    ? sensitiveList
+                        .map((r: any) => (typeof r === "string" ? r : r.resource || "resource"))
+                        .join(", ")
+                    : "None exposed"}
+                </div>
               </div>
             </div>
           </div>

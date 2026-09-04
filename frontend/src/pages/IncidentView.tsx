@@ -35,6 +35,9 @@ export const IncidentView: React.FC = () => {
     setIsIdle(false);
     setLoading(true);
     setError(null);
+    setResponse(null);
+    setRawEvents([]);
+    setSelectedEvent(null);
     try {
       const scenario = await fetchDemoScenario();
       setRawEvents(scenario.events);
@@ -72,14 +75,14 @@ export const IncidentView: React.FC = () => {
             attack_after: verifResult.attack_after,
             defense_verified: verifResult.defense_verified,
             blocked_event_ids: verifResult.blocked_event_ids,
-            notes: "Defense successfully applied over CHIMERA verification framework.",
+            notes: `Defense verified via CHIMERA engine. Status: ${verifResult.status || "DEFENSE_VERIFIED"}`,
           },
           verification: {
             attack_before: verifResult.attack_before,
             attack_after: verifResult.attack_after,
             defense_verified: verifResult.defense_verified,
             blocked_event_ids: verifResult.blocked_event_ids,
-            notes: "Defense successfully applied over CHIMERA verification framework.",
+            notes: `Defense verified via CHIMERA engine. Status: ${verifResult.status || "DEFENSE_VERIFIED"}`,
           },
           defense_result: {
             defense_verified: verifResult.defense_verified,
@@ -101,6 +104,17 @@ export const IncidentView: React.FC = () => {
     try {
       const incidentId = response?.incident_info?.incident_id || "INC-DEMO-1";
       const simResult = await simulateIntervention(incidentId, rawEvents);
+      if (response && simResult.selected_intervention) {
+        setResponse({
+          ...response,
+          intervention: {
+            selected: simResult.selected_intervention,
+            rationale: `What-If simulation evaluated ${simResult.evaluated_simulations.length} candidate interventions. Selected minimum operational cost candidate.`,
+            evaluated: simResult.evaluated_simulations,
+          },
+          what_if_result: simResult.selected_intervention as any,
+        });
+      }
       alert(
         `[WHAT-IF SIMULATION COMPLETE]\nStatus: ${simResult.status}\nEvaluated Candidates: ${simResult.evaluated_simulations.length}\nSelected Intervention: ${simResult.selected_intervention?.description}`
       );

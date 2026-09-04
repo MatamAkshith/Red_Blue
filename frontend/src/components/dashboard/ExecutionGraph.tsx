@@ -175,8 +175,23 @@ export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
 
   const handleCardClick = (node: ExecutionNodeData) => {
     setInternalSelected(node);
-    if (onNodeSelect && node.rawEvent) {
-      onNodeSelect(node.rawEvent);
+    if (onNodeSelect) {
+      const eventToSelect = node.rawEvent || {
+        event_id: node.id,
+        parent_event_id: node.parentId || null,
+        session_id: "S-DEMO-1",
+        agent_id: "agent-support-bot",
+        event_type: node.eventType,
+        source: node.source,
+        target: node.target || null,
+        resource: node.resource || null,
+        action: node.action || null,
+        permission: node.permission || null,
+        trust_level: node.trustLevel,
+        timestamp: new Date().toISOString(),
+        metadata: { detail: node.detail, text: node.detail },
+      };
+      onNodeSelect(eventToSelect);
     }
   };
 
