@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+@theme {
+  --text-xs: 14px;      /* 12px -> 14px (+2px) */
+  --text-sm: 16px;      /* 14px -> 16px (+2px) */
+  --text-base: 18px;    /* 16px -> 18px (+2px) */
+  --text-lg: 20px;      /* 18px -> 20px (+2px) */
+  --text-xl: 22px;      /* 20px -> 22px (+2px) */
+  --text-2xl: 26px;     /* 24px -> 26px (+2px) */
+  --text-3xl: 32px;     /* 30px -> 32px (+2px) */
+}
+
+/* Overrides for explicit pixel font-size utilities (+2px readability boost) */
+.text-\[9px\] { font-size: 11px !important; }
+.text-\[10px\] { font-size: 12px !important; }
+.text-\[11px\] { font-size: 13px !important; }
+
 :root {
   color-scheme: light;
 }
