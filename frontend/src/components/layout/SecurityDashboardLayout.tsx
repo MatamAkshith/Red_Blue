@@ -73,16 +73,16 @@ export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = (
         <div>
           {/* Brand Logo Header */}
           <div className="h-16 px-4 flex items-center space-x-3 border-b border-slate-200">
-            <div className="w-8 h-8 rounded-xs bg-slate-900 text-white flex items-center justify-center font-mono font-bold text-xs shadow-2xs">
-              <span className="text-red-500 font-bold">RE</span>
-              <span className="text-blue-500 font-bold">B</span>
+            <div className="w-8 h-8 rounded-xs bg-slate-900 text-white flex items-center justify-center font-sans font-bold text-xs shadow-2xs">
+              <span className="text-blue-500 font-bold">R</span>
+              <span className="text-red-500 font-bold">B</span>
             </div>
             <div>
-              <div className="text-base font-extrabold tracking-tight uppercase font-mono flex items-center">
-                <span className="text-red-600">REB</span>
-                <span className="text-blue-600">LUE</span>
+              <div className="text-base font-extrabold tracking-tight uppercase font-sans flex items-center">
+                <span className="text-blue-600">RED</span>
+                <span className="text-red-600">BLUE</span>
               </div>
-              <div className="text-[11px] font-mono text-slate-500 tracking-wider">
+              <div className="text-[11px] font-sans text-slate-500 font-semibold tracking-wider">
                 SOC ENGINE v1.4
               </div>
             </div>
@@ -92,7 +92,7 @@ export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = (
           <nav className="p-3.5 space-y-6 overflow-y-auto">
             {navGroupings.map((group) => (
               <div key={group.group}>
-                <div className="px-2 mb-2 text-xs font-mono font-bold tracking-widest text-slate-400 uppercase">
+                <div className="px-2 mb-2 text-[11px] font-sans font-bold tracking-widest text-slate-400 uppercase">
                   {group.group}
                 </div>
                 <div className="space-y-1">
@@ -133,7 +133,7 @@ export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = (
         </div>
 
         {/* Sidebar Footer System Status */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50/60 font-mono">
+        <div className="p-4 border-t border-slate-200 bg-slate-50/60 font-sans">
           <div className="flex items-center justify-between text-xs text-slate-600 font-semibold">
             <span>DETECTOR</span>
             <span className="text-emerald-600 font-bold">ONLINE</span>
@@ -150,10 +150,10 @@ export const SecurityDashboardLayout: React.FC<SecurityDashboardLayoutProps> = (
         {/* Topbar Header */}
         <header className="h-16 shrink-0 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-10 shadow-2xs">
           <div className="flex items-center space-x-4">
-            <h1 className="text-base font-extrabold uppercase tracking-tight font-mono flex items-center space-x-1">
-              <span className="text-red-600">REB</span>
-              <span className="text-blue-600">LUE</span>
-              <span className="text-slate-900 ml-2">Security Operations</span>
+            <h1 className="text-base font-extrabold uppercase tracking-tight font-sans flex items-center space-x-1">
+              <span className="text-blue-600">RED</span>
+              <span className="text-red-600">BLUE</span>
+              <span className="text-slate-900 ml-2 font-bold">Security Operations</span>
             </h1>
             <span className="h-4 w-px bg-slate-200" />
             <div className="flex items-center space-x-2 text-xs font-mono">

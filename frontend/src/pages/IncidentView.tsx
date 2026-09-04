@@ -412,8 +412,8 @@ export const IncidentView: React.FC = () => {
             <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-slate-900 border border-slate-800 rounded-full font-mono text-xs text-white font-semibold">
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
               <span>
-                <strong className="text-red-500 font-extrabold">REB</strong>
-                <strong className="text-blue-500 font-extrabold">LUE</strong> AGENT OPERATIONAL CENTER
+                <strong className="text-blue-500 font-extrabold">RED</strong>
+                <strong className="text-red-500 font-extrabold">BLUE</strong> AGENT OPERATIONAL CENTER
               </span>
             </div>
 

@@ -33,8 +33,8 @@ export const Badge: React.FC<BadgeProps> = ({
   };
 
   const variantStyles: Record<BadgeVariant, string> = {
-    critical: "bg-red-600 text-white border-red-700 font-extrabold shadow-2xs",
-    malicious: "bg-rose-600 text-white border-rose-700 font-bold shadow-2xs",
+    critical: "bg-red-700 text-white border-red-800 font-extrabold shadow-2xs",
+    malicious: "bg-rose-500 text-white border-rose-600 font-bold shadow-2xs",
     warning: "bg-amber-500 text-slate-950 border-amber-600 font-bold shadow-2xs",
     suspicious: "bg-amber-500 text-slate-950 border-amber-600 font-bold shadow-2xs",
     success: "bg-emerald-600 text-white border-emerald-700 font-bold shadow-2xs",

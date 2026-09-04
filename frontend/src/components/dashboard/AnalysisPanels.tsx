@@ -39,11 +39,11 @@ export const AnalysisPanels: React.FC<AnalysisPanelsProps> = ({
   const getSeverityCardStyle = (severity: string): string => {
     switch (severity?.toUpperCase()) {
       case "CRITICAL":
-        return "bg-red-50/70 border-red-200 border-l-4 border-l-red-600";
+        return "bg-red-100/70 border-red-300 border-l-4 border-l-red-600";
       case "HIGH":
-        return "bg-rose-50/70 border-rose-200 border-l-4 border-l-rose-500";
+        return "bg-rose-50/50 border-rose-200 border-l-4 border-l-rose-400";
       case "MEDIUM":
-        return "bg-amber-50/70 border-amber-200 border-l-4 border-l-amber-500";
+        return "bg-amber-50/60 border-amber-200 border-l-4 border-l-amber-500";
       case "LOW":
         return "bg-slate-50 border-slate-200 border-l-4 border-l-slate-400";
       default:
