@@ -248,6 +248,15 @@ Phase 1.2 introduces the **Deterministic Detection Engine**, establishing the se
   - `evidence`: Tagged `EvidenceItem` list combining findings and impact evidence.
 - **Strict Validation**: Rejects `None` or empty graphs, missing node references, or ungrounded graph edges by raising `AdapterValidationError`.
 
+### [Phase 1.4.2] Evidence & Provenance Assembly
+- **Evidence Assembler Module**: Created `backend/app/adapter/evidence_assembler.py` implementing `assemble_evidence(findings, impact, graph)`. Exported via `backend/app/adapter/__init__.py`.
+- **Strict Provenance Rules**:
+  - **Graph Node Verification**: Validates that every `EvidenceItem` references an `event_id` existing in `graph.nodes`. If any referenced node is missing, raises `AdapterValidationError`.
+  - **Single Session Isolation**: Validates that all events referenced in evidence belong strictly to the same `session_id`. If evidence crosses session boundaries, raises `AdapterValidationError`.
+  - **Fact Deduplication**: Deduplicates evidence items by `(event_id, category, description)` tuple to eliminate duplicate graph node claims.
+  - **Deterministic Output Order**: Sorts evidence items deterministically by `(event_timestamp, event_id, category, description)`.
+- **Integration**: Updated `build_incident_analysis` in `incident_adapter.py` to populate `IncidentAnalysis.evidence` via `assemble_evidence()`.
+
 
 ---
 

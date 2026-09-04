@@ -16,6 +16,7 @@ from typing import Any, Collection, List, Set, Tuple, Union
 
 import networkx as nx
 
+from .evidence_assembler import assemble_evidence
 from ..aegis.models import ImpactResult
 from ..contracts.incident_analysis import (
     BlastRadius,
@@ -256,38 +257,8 @@ def build_incident_analysis(
     else:
         blast_radius = BlastRadius()
 
-    # Step 11: Evidence Items
-    evidence_items: List[EvidenceItem] = []
-    seen_evidence_keys: Set[Tuple[str, str, str]] = set()
-
-    for f in findings:
-        for eid in f.event_ids:
-            cat = "detection_finding"
-            det_type_str = _get_severity_str(f.detector_type)
-            if det_type_str == "INDIRECT_PROMPT_INJECTION":
-                cat = "trust_boundary_crossing"
-            elif det_type_str == "PRIVILEGE_VIOLATION":
-                cat = "privilege_change"
-            elif det_type_str == "DATA_EXFILTRATION":
-                cat = "external_transmission"
-
-            key = (eid, cat, f.description)
-            if key not in seen_evidence_keys:
-                seen_evidence_keys.add(key)
-                evidence_items.append(
-                    EvidenceItem(
-                        event_id=eid,
-                        category=cat,
-                        description=f"{f.title}: {f.description}",
-                    )
-                )
-
-    for imp in impact_list:
-        for ev_item in imp.evidence:
-            key = (ev_item.event_id, ev_item.category, ev_item.description)
-            if key not in seen_evidence_keys:
-                seen_evidence_keys.add(key)
-                evidence_items.append(ev_item)
+    # Step 11: Evidence Items & Provenance Assembly
+    evidence_items = assemble_evidence(findings=findings, impact=impact_list, graph=graph)
 
     return IncidentAnalysis(
         incident_id=incident_id,
