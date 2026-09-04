@@ -12,8 +12,7 @@ from __future__ import annotations
 
 from typing import Collection
 
-from pydantic import BaseModel, ConfigDict, Field
-
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 from backend.app.adapter import AdapterValidationError, build_incident_analysis
 from backend.app.aegis.engine import ImpactEngine
 from backend.app.aegis.models import ImpactResult
@@ -51,6 +50,12 @@ class IncidentReport(BaseModel):
     recalled_pattern: StoredPattern | None = None
     intervention: InterventionDecision = Field(default_factory=InterventionDecision)
     verification: VerificationResult = Field(default_factory=VerificationResult)
+
+    @computed_field
+    @property
+    def incident(self) -> IncidentAnalysis | None:
+        """API serialization field mapping incident_analysis to 'incident' for frontend consumers."""
+        return self.incident_analysis
 
 
 def run_pipeline(

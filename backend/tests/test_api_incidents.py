@@ -37,10 +37,10 @@ def test_analyze_returns_the_full_incident_report():
 
     assert len(body["findings"]) == 6                      # detection findings
     assert len(body["impacts"]) == 6                       # AEGIS impact
-    incident_data = body.get("incident_analysis") or body.get("incident")
-    assert incident_data is not None
-    assert incident_data["attack_path"]                    # reconstructed attack path
-    assert incident_data["blast_radius"]["risk_score"] > 0
+    assert "incident" in body
+    assert body["incident"] is not None
+    assert body["incident"]["attack_path"]                 # reconstructed attack path
+    assert body["incident"]["blast_radius"]["risk_score"] > 0
     assert body["intervention"]["selected"]["intervention_type"] == "BLOCK_EXTERNAL_DESTINATION"
     assert body["intervention"]["evaluated"]               # what-if simulations
     assert body["verification"]["attack_before"] == "SUCCESS"

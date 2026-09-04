@@ -91,6 +91,7 @@ def test_orchestrator_end_to_end_success():
     assert len(report.findings) >= 2
     assert len(report.impacts) >= 1
     assert report.incident_analysis is not None
+    assert report.incident is report.incident_analysis
     assert report.investigation is not None
     assert report.investigation.root_cause != ""
     assert report.intervention.selected is not None
