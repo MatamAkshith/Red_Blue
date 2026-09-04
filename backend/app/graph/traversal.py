@@ -6,6 +6,17 @@ import networkx as nx
 from .models import GraphPath, GraphValidationError
 
 
+def _require_validated_graph(graph: nx.DiGraph) -> None:
+    if not isinstance(graph, nx.DiGraph):
+        raise GraphValidationError(
+            f"Execution graph must be nx.DiGraph, got {type(graph).__name__}."
+        )
+    if not graph.graph.get("_blackbox_validated"):
+        raise GraphValidationError(
+            "Execution graph was not produced and validated by build_execution_graph()."
+        )
+
+
 def get_root_events(graph: nx.DiGraph) -> list[str]:
     """Retrieve all root event IDs (nodes with in-degree 0) in the execution graph.
 
@@ -15,6 +26,7 @@ def get_root_events(graph: nx.DiGraph) -> list[str]:
     Returns:
         list[str]: Sorted list of event_id strings corresponding to root events.
     """
+    _require_validated_graph(graph)
     roots = [node for node, in_deg in graph.in_degree() if in_deg == 0]
     return sorted(roots)
 
@@ -28,6 +40,7 @@ def get_leaf_events(graph: nx.DiGraph) -> list[str]:
     Returns:
         list[str]: Sorted list of event_id strings corresponding to leaf events.
     """
+    _require_validated_graph(graph)
     leaves = [node for node, out_deg in graph.out_degree() if out_deg == 0]
     return sorted(leaves)
 
@@ -45,6 +58,7 @@ def get_ancestors(graph: nx.DiGraph, event_id: str) -> list[str]:
     Raises:
         GraphValidationError: If event_id does not exist in the graph.
     """
+    _require_validated_graph(graph)
     if not graph.has_node(event_id):
         raise GraphValidationError(f"Event node '{event_id}' does not exist in execution graph.")
     ancestors = nx.ancestors(graph, event_id)
@@ -64,6 +78,7 @@ def get_descendants(graph: nx.DiGraph, event_id: str) -> list[str]:
     Raises:
         GraphValidationError: If event_id does not exist in the graph.
     """
+    _require_validated_graph(graph)
     if not graph.has_node(event_id):
         raise GraphValidationError(f"Event node '{event_id}' does not exist in execution graph.")
     descendants = nx.descendants(graph, event_id)
@@ -84,6 +99,7 @@ def get_execution_path(graph: nx.DiGraph, source: str, target: str) -> GraphPath
     Raises:
         GraphValidationError: If source or target node does not exist, or if no directed path exists between them.
     """
+    _require_validated_graph(graph)
     if not graph.has_node(source):
         raise GraphValidationError(f"Source event node '{source}' does not exist in execution graph.")
     if not graph.has_node(target):

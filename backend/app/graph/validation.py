@@ -67,6 +67,19 @@ def validate_execution_graph(events: list[AgentEvent], graph: nx.DiGraph) -> boo
                     f"Root inconsistency: root event '{event.event_id}' (parent_event_id=None) has non-zero in-degree."
                 )
         else:
+            parent_event = event_map.get(event.parent_event_id)
+            if parent_event is None:
+                # The builder reports this separately; retain this guard for
+                # consumers validating a graph that did not come from it.
+                raise GraphValidationError(
+                    f"Missing parent event_id '{event.parent_event_id}' for event '{event.event_id}'."
+                )
+            if parent_event.session_id != event.session_id:
+                raise GraphValidationError(
+                    f"Cross-session parent edge: parent '{parent_event.event_id}' belongs to "
+                    f"session '{parent_event.session_id}', but child '{event.event_id}' belongs to "
+                    f"session '{event.session_id}'."
+                )
             if not graph.has_edge(event.parent_event_id, event.event_id):
                 raise GraphValidationError(
                     f"Missing parent edge: event '{event.event_id}' has parent '{event.parent_event_id}', but edge '{event.parent_event_id} -> {event.event_id}' is missing."
@@ -85,3 +98,27 @@ def validate_execution_graph(events: list[AgentEvent], graph: nx.DiGraph) -> boo
             )
 
     return True
+
+
+def validate_execution_graph_from_graph(graph: nx.DiGraph) -> bool:
+    """Validate a graph supplied at a P1 consumer boundary.
+
+    The authoritative builder validates before returning. This function is for
+    consumers that receive an existing ``nx.DiGraph`` and must reject a
+    malformed hand-built or tampered graph instead of analyzing it.
+    """
+    if not isinstance(graph, nx.DiGraph):
+        raise GraphValidationError(
+            f"Execution graph must be nx.DiGraph, got {type(graph).__name__}."
+        )
+
+    events: list[AgentEvent] = []
+    for node_id, data in graph.nodes(data=True):
+        event = data.get("event")
+        if not isinstance(event, AgentEvent):
+            raise GraphValidationError(
+                f"Payload missing or invalid: graph node '{node_id}' does not contain an AgentEvent."
+            )
+        events.append(event)
+
+    return validate_execution_graph(events, graph)

@@ -10,6 +10,8 @@ from app.detection import (
     DetectorType,
     Severity,
 )
+from app.events.schemas import AgentEvent, EventType
+from app.graph.builder import build_execution_graph
 
 
 class DummyDetectorA(BaseDetector):
@@ -158,8 +160,11 @@ def test_output_determinism_and_severity_sorting():
     engine.register_detector(DummyDetectorA())
     engine.register_detector(DummyDetectorB())
 
-    g = nx.DiGraph()
-    g.add_node("evt_001")
+    g = build_execution_graph([
+        AgentEvent(event_id="evt_001", session_id="session-1", agent_id="agent-1", event_type=EventType.INPUT, source="user"),
+        AgentEvent(event_id="evt_002", parent_event_id="evt_001", session_id="session-1", agent_id="agent-1", event_type=EventType.DECISION, source="agent"),
+        AgentEvent(event_id="evt_003", parent_event_id="evt_002", session_id="session-1", agent_id="agent-1", event_type=EventType.ACTION, source="agent"),
+    ])
 
     # Execute 50 times to guarantee output order determinism
     for _ in range(50):

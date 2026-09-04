@@ -117,7 +117,7 @@ def test_event_preservation():
     )
     graph = build_execution_graph([event])
     stored_event = graph.nodes["e1"]["event"]
-    assert stored_event is event
+    assert stored_event is not event
     assert stored_event.event_id == "e1"
     assert stored_event.metadata == {"key": "value"}
 

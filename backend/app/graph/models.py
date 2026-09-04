@@ -15,6 +15,17 @@ CORE GRAPH INVARIANTS:
    Given the same sequence of AgentEvents, graph construction produces an identical graph topology and node representation every time.
 7. Invariant 7: No security semantics (the graph does not decide maliciousness/risk).
    The Execution Graph is a pure, structural execution representation. It contains no vulnerability scores, detection logic, or risk assessments.
+
+TRUST AND TIME BOUNDARY:
+- Node identity and parent-child edges are structural facts enforced by this
+  package. ``parent_event_id`` topology, not timestamps, establishes
+  execution lineage.
+- ``trust_level``, permission, source, target, resource, action, metadata,
+  and timestamps are validated telemetry claims. P1.1 preserves them but
+  does not authenticate, endorse, or reinterpret them as trusted truth.
+- Timestamp quality (future, equal, or inconsistent times) belongs to a
+  telemetry-quality policy layer; it must never rewrite valid parent-child
+  topology here.
 """
 
 from __future__ import annotations

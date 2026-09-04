@@ -79,7 +79,7 @@ def test_event_preservation_end_to_end():
     assert validate_execution_graph([event], graph) is True
 
     extracted = graph.nodes["EVT_PRESERVE"]["event"]
-    assert extracted is event
+    assert extracted is not event
     assert extracted.event_id == "EVT_PRESERVE"
     assert extracted.session_id == "sess_preserve"
     assert extracted.metadata == {"critical_flag": True, "payload_size": 2048}

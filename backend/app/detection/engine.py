@@ -10,6 +10,7 @@ from .detectors.privilege_violation import PrivilegeViolationDetector
 from .detectors.prompt_injection import PromptInjectionDetector
 from .interfaces import BaseDetector
 from .models import DetectionError, DetectionFinding, Severity
+from app.graph.validation import GraphValidationError, validate_execution_graph_from_graph
 
 SEVERITY_PRIORITY: Dict[str, int] = {
     Severity.CRITICAL.value if hasattr(Severity.CRITICAL, "value") else str(Severity.CRITICAL): 0,
@@ -69,6 +70,11 @@ class DetectionEngine:
 
         if len(graph.nodes) == 0:
             return []
+
+        try:
+            validate_execution_graph_from_graph(graph)
+        except GraphValidationError as exc:
+            raise DetectionError(f"Invalid execution graph: {exc}") from exc
 
         all_findings: List[DetectionFinding] = []
 
