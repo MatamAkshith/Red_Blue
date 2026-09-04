@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import networkx as nx
 from app.events.schemas import AgentEvent
-from app.graph.models import GraphValidationError
+from .models import GraphValidationError
 
 
 def validate_execution_graph(events: list[AgentEvent], graph: nx.DiGraph) -> bool:

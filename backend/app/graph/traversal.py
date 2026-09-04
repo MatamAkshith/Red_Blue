@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import networkx as nx
-from app.graph.models import GraphPath, GraphValidationError
+from .models import GraphPath, GraphValidationError
 
 
 def get_root_events(graph: nx.DiGraph) -> list[str]:

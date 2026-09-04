@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import networkx as nx
 from app.events.schemas import AgentEvent
-from app.graph.models import GraphBuildError
+from .models import GraphBuildError
 
 
 def build_execution_graph(events: list[AgentEvent]) -> nx.DiGraph:
