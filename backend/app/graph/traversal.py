@@ -1,4 +1,4 @@
-"""Execution graph traversal module — contract definitions."""
+"""Execution graph traversal module — deterministic graph navigation utilities."""
 
 from __future__ import annotations
 
@@ -13,9 +13,10 @@ def get_root_events(graph: nx.DiGraph) -> list[str]:
         graph: The execution graph (nx.DiGraph).
 
     Returns:
-        list[str]: List of event_id strings corresponding to root events.
+        list[str]: Sorted list of event_id strings corresponding to root events.
     """
-    raise NotImplementedError("get_root_events is not implemented yet")
+    roots = [node for node, in_deg in graph.in_degree() if in_deg == 0]
+    return sorted(roots)
 
 
 def get_leaf_events(graph: nx.DiGraph) -> list[str]:
@@ -25,9 +26,10 @@ def get_leaf_events(graph: nx.DiGraph) -> list[str]:
         graph: The execution graph (nx.DiGraph).
 
     Returns:
-        list[str]: List of event_id strings corresponding to leaf events.
+        list[str]: Sorted list of event_id strings corresponding to leaf events.
     """
-    raise NotImplementedError("get_leaf_events is not implemented yet")
+    leaves = [node for node, out_deg in graph.out_degree() if out_deg == 0]
+    return sorted(leaves)
 
 
 def get_ancestors(graph: nx.DiGraph, event_id: str) -> list[str]:
@@ -38,9 +40,15 @@ def get_ancestors(graph: nx.DiGraph, event_id: str) -> list[str]:
         event_id: Target event ID.
 
     Returns:
-        list[str]: List of ancestor event_id strings leading up to the target event.
+        list[str]: Sorted list of ancestor event_id strings leading up to the target event.
+
+    Raises:
+        GraphValidationError: If event_id does not exist in the graph.
     """
-    raise NotImplementedError("get_ancestors is not implemented yet")
+    if not graph.has_node(event_id):
+        raise GraphValidationError(f"Event node '{event_id}' does not exist in execution graph.")
+    ancestors = nx.ancestors(graph, event_id)
+    return sorted(list(ancestors))
 
 
 def get_descendants(graph: nx.DiGraph, event_id: str) -> list[str]:
@@ -51,9 +59,15 @@ def get_descendants(graph: nx.DiGraph, event_id: str) -> list[str]:
         event_id: Source event ID.
 
     Returns:
-        list[str]: List of descendant event_id strings spawned by the source event.
+        list[str]: Sorted list of descendant event_id strings spawned by the source event.
+
+    Raises:
+        GraphValidationError: If event_id does not exist in the graph.
     """
-    raise NotImplementedError("get_descendants is not implemented yet")
+    if not graph.has_node(event_id):
+        raise GraphValidationError(f"Event node '{event_id}' does not exist in execution graph.")
+    descendants = nx.descendants(graph, event_id)
+    return sorted(list(descendants))
 
 
 def get_execution_path(graph: nx.DiGraph, source: str, target: str) -> GraphPath:
@@ -66,5 +80,17 @@ def get_execution_path(graph: nx.DiGraph, source: str, target: str) -> GraphPath
 
     Returns:
         GraphPath: List of event_id strings representing the path from source to target.
+
+    Raises:
+        GraphValidationError: If source or target node does not exist, or if no directed path exists between them.
     """
-    raise NotImplementedError("get_execution_path is not implemented yet")
+    if not graph.has_node(source):
+        raise GraphValidationError(f"Source event node '{source}' does not exist in execution graph.")
+    if not graph.has_node(target):
+        raise GraphValidationError(f"Target event node '{target}' does not exist in execution graph.")
+
+    try:
+        path = nx.shortest_path(graph, source=source, target=target)
+        return list(path)
+    except nx.NetworkXNoPath as exc:
+        raise GraphValidationError(f"No execution path exists from '{source}' to '{target}'.") from exc

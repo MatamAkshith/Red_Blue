@@ -142,5 +142,19 @@ The Universal AgentEvent represents a normalized, framework-agnostic execution s
   - Pass 1 adds nodes (`graph.add_node(event.event_id, event=event)`) and raises `GraphBuildError` on duplicate `event_id` values.
   - Pass 2 adds edges (`graph.add_edge(event.parent_event_id, event.event_id)`) and raises `GraphBuildError` if `parent_event_id` does not exist in the graph.
 - **Guarantees**: Ensures input order independence, supports multiple roots and branching traces, prevents placeholder parent node generation, and preserves intact `AgentEvent` objects on nodes.
-- **Pytest Unit Tests**: Created `backend/tests/test_graph_builder.py` covering single events, linear traces, branching, multiple roots, event model preservation, duplicate ID rejection, missing parent rejection, and input order independence (8 test functions, 21 total suite tests passing).
+- **Pytest Unit Tests**: Created `backend/tests/test_graph_builder.py` covering single events, linear traces, branching, multiple roots, event model preservation, duplicate ID rejection, missing parent rejection, and input order independence.
 - **Knowledge Base Update**: Documented Task 3 completion and architectural guarantees in `Implementation Changelog`.
+
+### [Phase 1.1 - Task 4] Implement Deterministic Graph Traversal
+- **Traversal Utilities**: Implemented structural graph navigation functions in `backend/app/graph/traversal.py`:
+  - `get_root_events(graph: nx.DiGraph) -> list[str]`
+  - `get_leaf_events(graph: nx.DiGraph) -> list[str]`
+  - `get_ancestors(graph: nx.DiGraph, event_id: str) -> list[str]`
+  - `get_descendants(graph: nx.DiGraph, event_id: str) -> list[str]`
+  - `get_execution_path(graph: nx.DiGraph, source: str, target: str) -> GraphPath`
+- **Determinism & Validation Guarantees**:
+  - Explicitly sorts all returned sets of event IDs alphabetically to eliminate non-deterministic set ordering.
+  - Validates node presence prior to traversal; raises `GraphValidationError` if a node does not exist.
+  - Catches `nx.NetworkXNoPath` when no path connects `source` and `target` and raises `GraphValidationError`.
+- **Pytest Unit Tests**: Created `backend/tests/test_graph_traversal.py` covering root/leaf identification, linear/branching ancestors and descendants, multi-root isolation, valid/invalid execution paths, nonexistent node errors, and 100-iteration determinism checks (10 test functions, 31 total suite tests passing).
+- **Knowledge Base Update**: Documented Task 4 completion in `Implementation Changelog`.
