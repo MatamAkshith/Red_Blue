@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import type { AgentEvent } from "../../api";
 import { Badge, type BadgeVariant } from "../ui/Badge";
 import { Card } from "../ui/Card";
 
@@ -15,9 +16,17 @@ export interface ExecutionNodeData {
   permission?: string;
   detail: string;
   parentId?: string;
+  rawEvent?: AgentEvent;
 }
 
-const MOCK_NODES: Record<string, ExecutionNodeData> = {
+interface ExecutionGraphProps {
+  events?: AgentEvent[];
+  attackPath?: string[];
+  selectedEvent?: AgentEvent | null;
+  onNodeSelect?: (event: AgentEvent) => void;
+}
+
+const DEFAULT_MOCK_NODES: Record<string, ExecutionNodeData> = {
   E1: {
     id: "E1",
     eventType: "INPUT",
@@ -102,10 +111,74 @@ const MOCK_NODES: Record<string, ExecutionNodeData> = {
   },
 };
 
-export const ExecutionGraph: React.FC = () => {
-  const [selectedNode, setSelectedNode] = useState<ExecutionNodeData>(
-    MOCK_NODES.E3
+export const ExecutionGraph: React.FC<ExecutionGraphProps> = ({
+  events = [],
+  attackPath = [],
+  selectedEvent,
+  onNodeSelect,
+}) => {
+  const [internalSelected, setInternalSelected] = useState<ExecutionNodeData>(
+    DEFAULT_MOCK_NODES.E3
   );
+
+  // Convert real events array to node map if available
+  const nodeMap: Record<string, ExecutionNodeData> = {};
+  if (events && events.length > 0) {
+    events.forEach((ev) => {
+      let threat: "Normal" | "Suspicious" | "Malicious" | "Benign" = "Normal";
+      if (attackPath.includes(ev.event_id)) {
+        if (ev.event_type === "ACTION" || ev.event_type === "TOOL_CALL" || ev.event_type === "DECISION") {
+          threat = "Malicious";
+        } else if (ev.event_type === "RETRIEVAL" || ev.trust_level === "UNTRUSTED") {
+          threat = "Suspicious";
+        } else {
+          threat = "Malicious";
+        }
+      } else if (ev.event_type === "TOOL_CALL") {
+        threat = "Benign";
+      }
+
+      let label = ev.action || ev.resource || ev.event_type;
+      if (ev.event_id === "E1") label = "User Prompt Ingest";
+      if (ev.event_id === "E2") label = "RAG Context Fetch";
+      if (ev.event_id === "E3") label = "Instruction Override";
+      if (ev.event_id === "E4") label = "Policy Validation";
+      if (ev.event_id === "E5") label = "CRM Export PII";
+      if (ev.event_id === "E6") label = "PII Data Payload";
+      if (ev.event_id === "E7") label = "External Exfiltration";
+
+      nodeMap[ev.event_id] = {
+        id: ev.event_id,
+        eventType: ev.event_type,
+        label,
+        threatLevel: threat,
+        trustLevel: (ev.trust_level as any) || "TRUSTED",
+        source: ev.source,
+        target: ev.target || undefined,
+        resource: ev.resource || undefined,
+        action: ev.action || undefined,
+        permission: ev.permission || undefined,
+        detail:
+          (ev.metadata && ev.metadata.text) ||
+          (ev.metadata && JSON.stringify(ev.metadata)) ||
+          `Telemetry event ${ev.event_id} (${ev.event_type})`,
+        parentId: ev.parent_event_id || undefined,
+        rawEvent: ev,
+      };
+    });
+  } else {
+    Object.assign(nodeMap, DEFAULT_MOCK_NODES);
+  }
+
+  const activeSelectedId =
+    selectedEvent?.event_id ?? internalSelected?.id ?? "E3";
+
+  const handleCardClick = (node: ExecutionNodeData) => {
+    setInternalSelected(node);
+    if (onNodeSelect && node.rawEvent) {
+      onNodeSelect(node.rawEvent);
+    }
+  };
 
   const getThreatVariant = (level: string): BadgeVariant => {
     switch (level) {
@@ -134,12 +207,15 @@ export const ExecutionGraph: React.FC = () => {
     }
   };
 
-  const renderNodeCard = (node: ExecutionNodeData) => {
-    const isSelected = selectedNode.id === node.id;
+  const renderNodeCard = (nodeKey: string) => {
+    const node = nodeMap[nodeKey] || DEFAULT_MOCK_NODES[nodeKey];
+    if (!node) return null;
+
+    const isSelected = activeSelectedId === node.id;
     return (
       <div
         key={node.id}
-        onClick={() => setSelectedNode(node)}
+        onClick={() => handleCardClick(node)}
         className={`w-48 p-3 rounded-xs border shadow-2xs cursor-pointer transition-all duration-150 relative ${getThreatBorder(
           node.threatLevel,
           isSelected
@@ -311,108 +387,38 @@ export const ExecutionGraph: React.FC = () => {
               <div className="absolute -top-3 left-4 bg-amber-100 border border-amber-300 text-amber-900 font-mono text-[10px] font-bold px-2 py-0.5 rounded-xs tracking-wider uppercase flex items-center space-x-1">
                 <span>⚡ UNTRUSTED DATA BOUNDARY</span>
               </div>
-              <div>{renderNodeCard(MOCK_NODES.E1)}</div>
-              <div>{renderNodeCard(MOCK_NODES.E2)}</div>
+              <div>{renderNodeCard("E1")}</div>
+              <div>{renderNodeCard("E2")}</div>
             </div>
 
             {/* Decision Node E3 & Branch E4 */}
             <div className="flex flex-col space-y-12">
-              <div>{renderNodeCard(MOCK_NODES.E3)}</div>
+              <div>{renderNodeCard("E3")}</div>
 
               {/* Branch Node E4 */}
               <div className="pt-2 pl-4">
                 <div className="text-[10px] font-mono text-emerald-700 font-semibold mb-1 uppercase tracking-wider flex items-center space-x-1">
                   <span>↪ BENIGN BRANCH</span>
                 </div>
-                {renderNodeCard(MOCK_NODES.E4)}
+                {renderNodeCard("E4")}
               </div>
             </div>
 
             {/* Malicious Attack Chain: E5 -> E6 -> E7 */}
             <div className="flex items-center space-x-10">
-              <div>{renderNodeCard(MOCK_NODES.E5)}</div>
-              <div>{renderNodeCard(MOCK_NODES.E6)}</div>
+              <div>{renderNodeCard("E5")}</div>
+              <div>{renderNodeCard("E6")}</div>
 
               {/* Exfiltration Boundary Impact Node E7 */}
               <div className="relative border-2 border-red-300 bg-red-50/30 p-2 rounded-md">
                 <div className="absolute -top-3 left-3 bg-red-100 border border-red-300 text-red-900 font-mono text-[10px] font-bold px-2 py-0.5 rounded-xs tracking-wider uppercase">
                   💥 IMPACT BOUNDARY
                 </div>
-                {renderNodeCard(MOCK_NODES.E7)}
+                {renderNodeCard("E7")}
               </div>
             </div>
           </div>
         </div>
-
-        {/* Selected Event Node Detail Panel (Monospace SOC Inspector) */}
-        {selectedNode && (
-          <div className="bg-white border border-slate-200 rounded-sm p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-mono font-bold text-slate-500 uppercase">
-                  EVENT INSPECTOR:
-                </span>
-                <span className="font-mono font-bold text-sm text-slate-900 bg-slate-100 px-2 py-0.5 rounded-xs border border-slate-200">
-                  {selectedNode.id}
-                </span>
-                <Badge variant={getThreatVariant(selectedNode.threatLevel)}>
-                  {selectedNode.eventType}
-                </Badge>
-              </div>
-
-              <div className="text-xs font-mono text-slate-500">
-                TRUST:{" "}
-                <span
-                  className={
-                    selectedNode.trustLevel === "UNTRUSTED"
-                      ? "text-amber-700 font-bold"
-                      : "text-emerald-700 font-bold"
-                  }
-                >
-                  {selectedNode.trustLevel}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
-              <div>
-                <span className="text-slate-400 block text-[10px]">SOURCE</span>
-                <span className="font-semibold text-slate-800">
-                  {selectedNode.source}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[10px]">
-                  TARGET / ENDPOINT
-                </span>
-                <span className="font-semibold text-slate-800">
-                  {selectedNode.target || "N/A"}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[10px]">RESOURCE</span>
-                <span className="font-semibold text-slate-800">
-                  {selectedNode.resource || "N/A"}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[10px]">
-                  DECLARED PERMISSION
-                </span>
-                <span className="font-semibold text-slate-800">
-                  {selectedNode.permission || "NONE"}
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 p-2.5 rounded-xs border border-slate-200 text-xs font-mono text-slate-700">
-              <span className="font-bold text-slate-900 block mb-1">
-                SUMMARY & DETAILED TELEMETRY:
-              </span>
-              {selectedNode.detail}
-            </div>
-          </div>
-        )}
       </div>
     </Card>
   );
