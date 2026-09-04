@@ -8,8 +8,8 @@ def test_fallback_confidence_is_zero_and_notice_present():
     result = fallback_investigation(evidence)
 
     assert result.confidence == 0.0
-    assert "AI explanation unavailable" in result.root_cause
-    assert "AI explanation unavailable" in result.attack_narrative
+    assert "AI EXPLANATION:\nUnavailable" in result.root_cause
+    assert "AI EXPLANATION:\nUnavailable" in result.attack_narrative
 
 
 def test_fallback_attack_narrative_uses_confirmed_attack_path():

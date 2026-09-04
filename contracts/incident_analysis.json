@@ -111,7 +111,7 @@
       "type": "object"
     },
     "BlastRadius": {
-      "description": "Mirrors the output of app.aegis.blast_radius.compute_blast_radius.",
+      "description": "Mirrors the output of app.aegis.blast_radius.compute_blast_radius.\nFrozen: blast radius is a P1-computed security fact, never something P2\nor an LLM recalculates or edits in place.",
       "properties": {
         "reachable_sensitive_resources": {
           "items": {
@@ -190,7 +190,7 @@
       "type": "string"
     },
     "PermissionFact": {
-      "description": "A permission-relevant fact P1 observed, e.g. an agent attempting to\nuse a privileged tool/resource, or a privilege change.",
+      "description": "A permission-relevant fact P1 observed, e.g. an agent attempting to\nuse a privileged tool/resource, or a privilege change. Frozen: a P1\npermission fact must not be mutable once P2 receives it.",
       "properties": {
         "event_id": {
           "title": "Event Id",
@@ -219,6 +219,7 @@
       "type": "object"
     },
     "SensitiveResource": {
+      "description": "Frozen: a P1 sensitive-resource fact must not be mutable once P2\nreceives it.",
       "properties": {
         "resource": {
           "title": "Resource",

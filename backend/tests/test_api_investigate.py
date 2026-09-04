@@ -70,3 +70,44 @@ def test_investigate_endpoint_falls_back_when_featherless_unavailable(monkeypatc
 
     assert resp.status_code == 200
     assert resp.json()["confidence"] == 0.0
+
+
+def test_investigate_endpoint_never_exposes_the_api_key(monkeypatch):
+    # A real-looking key is configured in the environment; the route (via
+    # the fallback path here, since Featherless construction is forced to
+    # fail) must never let it reach the HTTP response in any form.
+    monkeypatch.setenv("FEATHERLESS_API_KEY", "super-secret-test-key-value")
+
+    def raise_unavailable(settings):
+        raise FeatherlessError("no key configured")
+
+    monkeypatch.setattr(
+        "app.understand.investigation.investigator.FeatherlessClient", raise_unavailable
+    )
+
+    resp = client.post("/investigate", json=valid_incident_payload())
+
+    assert resp.status_code == 200
+    assert "super-secret-test-key-value" not in resp.text
+
+
+def test_investigator_package_never_imports_fastapi():
+    # Static proof (not just "nothing broke at runtime", which can't tell
+    # you this since fastapi is already loaded elsewhere in the same test
+    # process) that app.understand.* -- the actual investigation pipeline
+    # routes_investigate.py delegates to -- has no FastAPI dependency and
+    # is genuinely usable standalone.
+    import ast
+    import pathlib
+
+    understand_root = pathlib.Path(__file__).resolve().parent.parent / "app" / "understand"
+    offending: list[str] = []
+    for path in understand_root.rglob("*.py"):
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module and "fastapi" in node.module:
+                offending.append(str(path))
+            elif isinstance(node, ast.Import) and any("fastapi" in a.name for a in node.names):
+                offending.append(str(path))
+
+    assert offending == []

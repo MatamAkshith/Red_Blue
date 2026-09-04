@@ -97,7 +97,7 @@ def test_valid_incident_parses():
     incident = make_incident()
     assert incident.incident_id == "INC-1"
     assert len(incident.events) == 4
-    assert incident.attack_path == ["E14", "E15", "E16", "E17"]
+    assert incident.attack_path == ("E14", "E15", "E16", "E17")
 
 
 def test_missing_required_field_rejected():

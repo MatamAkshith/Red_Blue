@@ -21,6 +21,7 @@ import openai
 from pydantic import ValidationError
 
 from app.core.config import Settings
+from app.understand.evidence.extractor import known_event_ids
 from app.understand.investigation.prompts import build_investigation_prompt
 from app.understand.investigation.schemas import Investigation
 
@@ -76,11 +77,33 @@ class FeatherlessClient:
 
         payload = self._parse_json(content)
         try:
-            return Investigation.model_validate(payload)
+            investigation = Investigation.model_validate(payload)
         except ValidationError as exc:
             raise FeatherlessError(
                 f"Featherless response failed schema validation: {exc}"
             ) from exc
+
+        self._validate_provenance(investigation, evidence)
+        return investigation
+
+    @staticmethod
+    def _validate_provenance(investigation: Investigation, evidence: dict[str, Any]) -> None:
+        # Schema validation only confirms the response is well-formed JSON
+        # matching Investigation's shape -- it says nothing about whether
+        # the event_ids inside it are real. A hallucinated event_id would
+        # otherwise pass through as if it were confirmed evidence. Every
+        # event_id the model references must actually appear in the
+        # evidence it was given.
+        valid_ids = known_event_ids(evidence)
+        referenced_ids = {investigation.critical_decision.event_id} | {
+            item.event_id for item in investigation.evidence_interpretation
+        }
+        fabricated = referenced_ids - valid_ids
+        if fabricated:
+            raise FeatherlessError(
+                "Featherless referenced event_id(s) not present in the supplied "
+                f"evidence (fabricated or hallucinated): {sorted(fabricated)}"
+            )
 
     @staticmethod
     def _parse_json(content: str) -> dict[str, Any]:

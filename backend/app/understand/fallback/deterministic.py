@@ -6,19 +6,26 @@ plain templated text rather than sophisticated language. This exists only
 to keep Blackbox functional without the LLM; it is not a substitute for
 Featherless's investigation quality.
 
-Every field explicitly distinguishes three things a reader must not
-confuse:
+The prose fields (root_cause, attack_narrative) are rendered as three
+explicitly labeled sections so a reader never has to guess which kind of
+claim they're looking at:
 
-- CONFIRMED EVIDENCE -- facts P1 already determined (event types, trust
-  levels, tagged evidence categories, permissions, sensitive resources,
-  blast radius). Stated plainly, labeled "Confirmed:".
-- DETERMINISTIC INFERENCE -- a small number of fixed, explainable rules
-  applied to that evidence (e.g. "the first DECISION event in the attack
-  path is flagged as the critical decision"). Labeled "Deterministic
-  inference:", never presented as a judgement call.
-- UNAVAILABLE AI EXPLANATION -- root_cause/attack_narrative that would
-  normally need an LLM's interpretation are explicitly marked as
-  unavailable rather than silently faked to look like one.
+CONFIRMED:
+    Facts P1 already determined (event types, trust levels, tagged
+    evidence categories, permissions, sensitive resources, blast radius),
+    stated plainly -- no interpretation added.
+
+DETERMINISTIC INFERENCE:
+    A small number of fixed, explainable rules applied to those facts
+    (e.g. "sensitive resource access + an external destination in the same
+    evidence package" implies "sensitive data reached an external
+    destination"). Never presented as a judgement call, and never
+    dependent on anything but the supplied evidence.
+
+AI EXPLANATION:
+    Always literally "Unavailable" here -- this module must never
+    fabricate AI reasoning or claim an LLM explanation exists. If you're
+    reading this section and it says anything else, that's a bug.
 """
 
 from __future__ import annotations
@@ -31,24 +38,60 @@ from app.understand.investigation.schemas import (
     Investigation,
 )
 
-_UNAVAILABLE_NOTICE = (
-    "AI explanation unavailable (Featherless unreachable) -- this is a "
-    "deterministic fallback built only from confirmed P1 evidence."
+_AI_EXPLANATION_UNAVAILABLE = (
+    "Unavailable -- Featherless could not be reached. This is a "
+    "deterministic-only report built solely from confirmed P1 evidence; "
+    "no AI reasoning was performed and none is claimed here."
 )
+
+
+def _report(confirmed: list[str], inference: list[str]) -> str:
+    confirmed_block = " ".join(confirmed) or "No confirmed facts available in this evidence package."
+    inference_block = " ".join(inference) or "No deterministic inference could be drawn from this evidence."
+    return (
+        f"CONFIRMED:\n{confirmed_block}\n\n"
+        f"DETERMINISTIC INFERENCE:\n{inference_block}\n\n"
+        f"AI EXPLANATION:\n{_AI_EXPLANATION_UNAVAILABLE}"
+    )
 
 
 def _build_root_cause(evidence: dict[str, Any]) -> str:
     incident_type = evidence.get("incident_type", "UNKNOWN")
-    return f"[{_UNAVAILABLE_NOTICE}] Confirmed incident_type: {incident_type}."
+    confirmed = [f"Incident type confirmed by P1 as {incident_type}."]
+
+    trust_crossings = evidence.get("trust_boundary_crossings") or []
+    inference = (
+        [
+            f"{len(trust_crossings)} confirmed trust boundary crossing(s) in the "
+            "evidence suggest untrusted input influenced agent behavior."
+        ]
+        if trust_crossings
+        else []
+    )
+    return _report(confirmed, inference)
 
 
 def _build_attack_narrative(evidence: dict[str, Any]) -> str:
     attack_path = evidence.get("attack_path") or []
-    if attack_path:
-        body = "Confirmed attack path (event_id sequence): " + " -> ".join(attack_path)
-    else:
-        body = "Confirmed evidence contains no reconstructed attack path."
-    return f"[{_UNAVAILABLE_NOTICE}] {body}"
+    confirmed = (
+        [f"Agent behavior followed confirmed event sequence: {' -> '.join(attack_path)}."]
+        if attack_path
+        else ["P1 did not reconstruct an attack path for this evidence."]
+    )
+
+    sensitive = evidence.get("sensitive_resources_accessed") or []
+    external = evidence.get("external_destinations") or []
+    if sensitive:
+        resources = ", ".join(r["resource"] for r in sensitive)
+        confirmed.append(f"Agent accessed confirmed sensitive resource(s): {resources}.")
+
+    inference: list[str] = []
+    if sensitive and external:
+        inference.append("Sensitive data reached an external destination.")
+    elif external:
+        inference.append("Agent activity reached an external destination.")
+
+    return _report(confirmed, inference)
 
 
 def _build_critical_decision(evidence: dict[str, Any]) -> CriticalDecision:
@@ -117,7 +160,9 @@ def fallback_investigation(evidence: dict[str, Any]) -> Investigation:
         evidence_interpretation=_build_evidence_interpretation(evidence),
         # 0.0 signals "no AI confidence assessment was made", not "zero
         # confidence in the underlying evidence" -- the confirmed facts
-        # above stand on their own regardless of this number.
+        # above stand on their own regardless of this number. This is the
+        # only value that's ever appropriate here: the fallback path never
+        # runs an LLM, so there is nothing to score confidence in.
         confidence=0.0,
         contributing_factors=_build_contributing_factors(evidence),
         failure_pattern_candidate=None,

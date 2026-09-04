@@ -23,18 +23,59 @@ _TRUST_BOUNDARY_CROSSING = "trust_boundary_crossing"
 _PRIVILEGE_CHANGE = "privilege_change"
 _DATA_MOVEMENT = "data_movement"
 _EXTERNAL_TRANSMISSION = "external_transmission"
+_DETECTION_FINDING = "detection_finding"
 _ANOMALY = "anomaly"
 _KNOWN_CATEGORIES = (
     _TRUST_BOUNDARY_CROSSING,
     _PRIVILEGE_CHANGE,
     _DATA_MOVEMENT,
     _EXTERNAL_TRANSMISSION,
+    _DETECTION_FINDING,
     _ANOMALY,
 )
 
 
 def _dump(event: AgentEvent) -> dict[str, Any]:
     return event.model_dump(mode="json")
+
+
+# Buckets in a build_prompt_evidence() package that carry an "event_id" key
+# per item (used by known_event_ids() below). sensitive_resources_accessed
+# is deliberately excluded -- SensitiveResource is about a resource, not a
+# specific event, and has no event_id field.
+_EVENT_ID_BEARING_BUCKETS = (
+    "suspicious_input",
+    "trust_boundary_crossings",
+    "important_decisions",
+    "tool_calls",
+    "privilege_changes",
+    "data_movement",
+    "external_destinations",
+    "detection_findings",
+    "anomalies",
+)
+
+
+def known_event_ids(evidence: dict[str, Any]) -> set[str]:
+    """The full set of event_ids that legitimately appear anywhere in an
+    evidence package built by build_prompt_evidence(). Used to check that a
+    conclusion referencing an event_id (e.g. Investigation.critical_decision,
+    EvidenceInterpretation) is actually grounded in evidence P1 provided --
+    not a fabricated ID the LLM invented."""
+
+    ids: set[str] = set(evidence.get("attack_path") or [])
+
+    initial_trigger = evidence.get("initial_trigger")
+    if initial_trigger and initial_trigger.get("event_id"):
+        ids.add(initial_trigger["event_id"])
+
+    for bucket_name in _EVENT_ID_BEARING_BUCKETS:
+        for item in evidence.get(bucket_name) or []:
+            event_id = item.get("event_id")
+            if event_id:
+                ids.add(event_id)
+
+    return ids
 
 
 def build_prompt_evidence(incident: IncidentAnalysis) -> dict[str, Any]:
@@ -81,6 +122,7 @@ def build_prompt_evidence(incident: IncidentAnalysis) -> dict[str, Any]:
         "sensitive_resources_accessed": [r.model_dump() for r in incident.sensitive_resources],
         "data_movement": evidence_by_category[_DATA_MOVEMENT],
         "external_destinations": evidence_by_category[_EXTERNAL_TRANSMISSION],
+        "detection_findings": evidence_by_category[_DETECTION_FINDING],
         "attack_path": list(incident.attack_path),
         "anomalies": evidence_by_category[_ANOMALY],
         "blast_radius": incident.blast_radius.model_dump(),

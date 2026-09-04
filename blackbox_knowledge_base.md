@@ -252,4 +252,37 @@ Phase 1.2 is officially closed, integrated, and verified.
 - **Structural Attack Pattern MVP**: The detection engine is a deterministic rule engine operating on execution graph structure and metadata. It is NOT a universal AI anomaly detector or ML classifier.
 - **LLM Independence**: Zero LLMs, Featherless APIs, or external heuristic engines are called during detection execution. Semantic narrative synthesis and incident root-cause analysis are explicitly delegated to Phase 2.
 
+## 11. P2.2 — Understand / Featherless Investigation
+
+P2.2 consumes, but does not establish, deterministic security facts. Its
+frozen input contract is `IncidentAnalysis`
+(`backend/app/contracts/incident_analysis.py`), mirrored by
+`contracts/incident_analysis.json`. P1 remains authoritative for events,
+paths, permissions, resources, severity, blast radius, and evidence.
+
+The Understand pipeline is:
+
+```text
+IncidentAnalysis -> build_prompt_evidence() -> FeatherlessClient.analyze()
+-> Investigation
+```
+
+`FeatherlessClient` uses the OpenAI-compatible Featherless endpoint only in
+`backend/app/understand/featherless/client.py`. Responses are parsed as the
+structured `Investigation` schema. P2.2 validates every response-referenced
+event ID against the supplied evidence; malformed JSON, invalid schema,
+unavailable credentials, transport/API errors, and failed provenance checks
+raise `FeatherlessError` and route through the deterministic fallback.
+
+The fallback produces an `Investigation` solely from confirmed P1 evidence
+and explicitly marks AI explanation unavailable. It never invents security
+facts or changes `IncidentAnalysis`. The `/investigate` route invokes this
+framework-agnostic investigator layer; the Understand modules do not import
+FastAPI.
+
+`IncidentAnalysis`, `PermissionFact`, `SensitiveResource`, and `BlastRadius`
+are frozen at the P1-to-P2 boundary so P2 and the LLM cannot overwrite
+deterministic P1 facts. The P2.2 test suite covers contract/schema behavior,
+evidence provenance, malformed Featherless output, deterministic fallback,
+investigator behavior, and the investigate API.
 

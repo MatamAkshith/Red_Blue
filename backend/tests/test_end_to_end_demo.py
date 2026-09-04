@@ -53,7 +53,7 @@ def test_full_pipeline_demonstrates_each_stage():
     #    attack path, permissions, sensitive resources, blast radius).
     incident: IncidentAnalysis = make_incident()
     assert incident.incident_type == "INDIRECT_PROMPT_INJECTION"
-    assert incident.attack_path == ["E14", "E15", "E16", "E17"]
+    assert incident.attack_path == ("E14", "E15", "E16", "E17")
     assert incident.blast_radius.risk_score == 8.5
 
     # 2. Evidence Extractor compresses IncidentAnalysis into a compact,
@@ -61,7 +61,7 @@ def test_full_pipeline_demonstrates_each_stage():
     #    interpretation yet.
     evidence = build_prompt_evidence(incident)
     assert evidence["incident_id"] == incident.incident_id
-    assert evidence["attack_path"] == incident.attack_path
+    assert evidence["attack_path"] == list(incident.attack_path)
     assert evidence["initial_trigger"]["event_id"] == "E14"
     assert [e["event_id"] for e in evidence["tool_calls"]] == ["E16"]
 
@@ -91,5 +91,5 @@ def test_full_pipeline_demonstrates_each_stage():
         assert item.event_id in {e.event_id for e in incident.events}
 
     # P1's facts are untouched by having gone through the LLM.
-    assert incident.attack_path == ["E14", "E15", "E16", "E17"]
+    assert incident.attack_path == ("E14", "E15", "E16", "E17")
     assert incident.blast_radius.risk_score == 8.5
