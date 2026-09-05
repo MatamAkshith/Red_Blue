@@ -18,5 +18,11 @@ dependencies = [
     "openai",
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["backend*", "api*"]
+
+
 [tool.vercel]
 entrypoint = "backend.app.main:app"
+
