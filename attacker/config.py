@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 def _load_env_file() -> None:
@@ -54,24 +55,85 @@ class AttackerConfig:
         "localhost",
         "0.0.0.0",
     )
+    ALLOWED_HOST_SUFFIXES = (
+        ".onrender.com",
+        "onrender.com",
+        ".render.com",
+        ".onrender.app",
+        ".vercel.app",
+    )
 
-    def __init__(self, host: str | None = None, port: int | None = None, endpoint: str | None = None, timeout: float | None = None):
-        self.host = (host if host is not None else os.getenv("TARGET_HOST", "127.0.0.1")).strip()
+    def __init__(
+        self,
+        host: str | None = None,
+        port: int | None = None,
+        endpoint: str | None = None,
+        timeout: float | None = None,
+        scheme: str | None = None,
+        target_url: str | None = None,
+    ):
+        raw_url = target_url or os.getenv("TARGET_URL")
+        raw_host = host if host is not None else os.getenv("TARGET_HOST")
+
+        parsed_scheme = scheme or os.getenv("TARGET_SCHEME")
+        parsed_host = raw_host
+        parsed_port = port if port is not None else os.getenv("TARGET_PORT")
+        parsed_endpoint = endpoint if endpoint is not None else os.getenv("TARGET_ENDPOINT")
+
+        # If a full target_url or raw_host starting with http(s):// is provided, parse it
+        url_to_parse = raw_url or (raw_host if raw_host and (raw_host.startswith("http://") or raw_host.startswith("https://")) else None)
+        if url_to_parse:
+            u = urlparse(url_to_parse)
+            if u.scheme:
+                parsed_scheme = u.scheme
+            if u.hostname:
+                parsed_host = u.hostname
+            if u.port:
+                parsed_port = u.port
+            elif u.scheme == "https" and parsed_port is None:
+                parsed_port = 443
+            elif u.scheme == "http" and parsed_port is None:
+                parsed_port = 80
+            if u.path and u.path != "/":
+                parsed_endpoint = u.path
+
+        self.host = (parsed_host if parsed_host else "127.0.0.1").strip()
         
-        port_val = port if port is not None else os.getenv("TARGET_PORT", "8000")
-        self.port = int(str(port_val).strip())
-        
-        endpoint_val = endpoint if endpoint is not None else os.getenv("TARGET_ENDPOINT", "/events/run-demo")
+        # Scheme determination
+        if parsed_scheme:
+            self.scheme = parsed_scheme.strip().lower()
+        elif any(self.host.endswith(suf) for suf in self.ALLOWED_HOST_SUFFIXES) or self.host in self.ALLOWED_HOST_SUFFIXES:
+            self.scheme = "https"
+        else:
+            self.scheme = "http"
+
+        # Port determination
+        if parsed_port is not None:
+            self.port = int(str(parsed_port).strip())
+        elif self.scheme == "https":
+            self.port = 443
+        else:
+            self.port = 8000
+
+        # Endpoint determination
+        endpoint_val = parsed_endpoint if parsed_endpoint is not None else "/events/run-demo"
         self.endpoint = str(endpoint_val).strip()
         if not self.endpoint.startswith("/"):
             self.endpoint = "/" + self.endpoint
-        
+
         timeout_val = timeout if timeout is not None else os.getenv("TARGET_TIMEOUT", "10.0")
         self.timeout = float(str(timeout_val).strip())
 
     @property
     def target_url(self) -> str:
-        return f"http://{self.host}:{self.port}{self.endpoint}"
+        if self.scheme == "https":
+            if self.port == 443:
+                return f"https://{self.host}{self.endpoint}"
+            return f"https://{self.host}:{self.port}{self.endpoint}"
+        else:
+            if self.port == 80:
+                return f"http://{self.host}{self.endpoint}"
+            return f"http://{self.host}:{self.port}{self.endpoint}"
 
     def validate(self) -> None:
         """Validate safety constraints to prevent misuse outside controlled demo environments."""
@@ -81,12 +143,14 @@ class AttackerConfig:
         # Check host safety
         is_safe_host = (
             self.host.endswith(".local") or
-            any(self.host.startswith(prefix) for prefix in self.ALLOWED_HOST_PREFIXES)
+            any(self.host.startswith(prefix) for prefix in self.ALLOWED_HOST_PREFIXES) or
+            any(self.host.endswith(suffix) for suffix in self.ALLOWED_HOST_SUFFIXES) or
+            self.host in self.ALLOWED_HOST_SUFFIXES
         )
         if not is_safe_host:
             raise ValueError(
-                f"Safety Violation: TARGET_HOST '{self.host}' is not a recognized local or private IP address. "
-                "The attacker simulator only operates against controlled demo targets (localhost, 192.168.x.x, 10.x.x.x, *.local)."
+                f"Safety Violation: TARGET_HOST '{self.host}' is not a recognized local or private IP address or authorized demo host. "
+                "The attacker simulator only operates against controlled demo targets (localhost, 192.168.x.x, 10.x.x.x, *.local, *.onrender.com)."
             )
 
         if not (1 <= self.port <= 65535):
@@ -97,3 +161,4 @@ def get_config() -> AttackerConfig:
     config = AttackerConfig()
     config.validate()
     return config
+

@@ -149,9 +149,7 @@ export type IncidentResponse = {
   pattern_signature?: string;
   recalled_pattern?: MemoryPattern | null;
 };
-
-const BASE = import.meta.env.VITE_API_BASE ?? "";
-
+const BASE = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE || "").replace(/\/+$/, "");
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return (await res.json()) as T;

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "redblue"
+version = "0.1.0"
+description = "Adaptive Security & Forensic Intelligence for AI Agents"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic>=2",
+    "httpx",
+    "networkx>=3.0",
+    "python-dotenv",
+    "openai",
+]
+
+[tool.vercel]
+entrypoint = "backend.app.main:app"

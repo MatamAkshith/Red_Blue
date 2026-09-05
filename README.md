@@ -1227,8 +1227,191 @@ Potential future extensions include:
 
 ---
 
+## 38. Render Deployment Guide
+
+REDBLUE is fully deployment-ready for production hosting on [Render](https://render.com).
+
+### Deployment Architecture
+
+```text
+Render Static Site (Frontend React/Vite)
+             ↓ HTTPS API requests
+Render Web Service (Backend FastAPI)
+             ↓ Execution Graph / Telemetry
+REDBLUE Security & Forensic Engine
+```
+
+---
+
+### 1. Automated Blueprint Deployment (`render.yaml`)
+
+REDBLUE includes a root-level `render.yaml` infrastructure-as-code configuration file.
+
+1. Connect your Git repository to Render.
+2. Select **Blueprints** from the Render Dashboard.
+3. Render automatically detects `render.yaml` and provisions both the Backend Web Service and Frontend Static Site.
+
+---
+
+### 2. Backend Deployment Settings (Render Web Service)
+
+| Setting | Value |
+|---|---|
+| **Service Type** | Web Service |
+| **Environment** | Python |
+| **Root Directory** | `.` (repository root) |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT` |
+
+#### Environment Variables (Backend)
+
+| Variable | Description | Example / Recommended Value |
+|---|---|---|
+| `PYTHONPATH` | Python path | `.` |
+| `PORT` | Render port (automatically set by Render) | `$PORT` |
+| `HOST` | Bind address | `0.0.0.0` |
+| `FRONTEND_URL` | Allowed CORS origin URL(s) | `https://redblue-frontend.onrender.com` |
+| `REDBLUE_DB_PATH` | Event store SQLite path | `blackbox.db` |
+| `FEATHERLESS_API_KEY` | Featherless API key (Optional) | `featherless_sec_...` |
+| `FEATHERLESS_BASE_URL` | Featherless API base URL | `https://api.featherless.ai/v1` |
+
+> **Note on Storage Persistence**: On Render's standard free tier, local filesystem storage (`blackbox.db`) is ephemeral and resets across instance restarts. To preserve events across restarts in production, attach a **Render Persistent Disk** or configure an external database volume.
+
+---
+
+### 3. Frontend Deployment Settings (Render Static Site)
+
+| Setting | Value |
+|---|---|
+| **Service Type** | Static Site |
+| **Build Command** | `cd frontend && npm install && npm run build` |
+| **Publish Directory** | `./frontend/dist` |
+
+#### Environment Variables (Frontend)
+
+| Variable | Description | Value |
+|---|---|---|
+| `VITE_API_URL` | Deployed Backend Web Service URL | `https://redblue-backend.onrender.com` |
+
+---
+
+### 4. Attacker Package Remote Target Configuration
+
+The synthetic attacker package can run locally or from a secondary machine while targeting the deployed Render backend over HTTPS.
+
+#### Configuration (`attacker/.env` or environment variables)
+
+```bash
+TARGET_HOST=redblue-backend.onrender.com
+TARGET_PORT=443
+TARGET_SCHEME=https
+TARGET_ENDPOINT=/events/run-demo
+```
+
+Or pass a single unified target URL:
+
+```bash
+TARGET_URL=https://redblue-backend.onrender.com/events/run-demo
+```
+
+#### Running Remote Scenarios
+
+Malicious attack scenario against Render backend:
+```bash
+python3 scripts/send_malicious.py
+```
+
+Benign scenario against Render backend:
+```bash
+python3 scripts/send_benign.py
+```
+
+---
+
+## 39. Vercel Deployment Guide
+
+REDBLUE supports unified full-stack monorepo deployment on [Vercel](https://vercel.com) — hosting both the React/Vite frontend and FastAPI backend.
+
+### Deployment Architecture
+
+```text
+Vercel Monorepo
+ ├── frontend/  ──> Vercel Static Build (React + Vite)
+ └── api/       ──> Vercel Python Function (`backend.app.main:app`)
+```
+
+---
+
+### 1. Automatic Deployment (`vercel.json`)
+
+REDBLUE includes a root-level [`vercel.json`](file:///Users/ashu/Documents/VMEG/Hackathons/SNIST/Red_Blue/vercel.json) configuration file.
+
+1. Connect your Git repository to Vercel.
+2. Import the project using repository root (`/`).
+3. Vercel automatically detects `vercel.json`, building:
+   - Frontend via `@vercel/static-build` from `frontend/`
+   - FastAPI Backend via `@vercel/python` from `api/index.py` (importing `backend.app.main:app`)
+
+---
+
+### 2. FastAPI Entrypoint & Configuration
+
+- **Confirmed Entrypoint**: `backend.app.main:app`
+- **Serverless Wrapper**: [`api/index.py`](file:///Users/ashu/Documents/VMEG/Hackathons/SNIST/Red_Blue/api/index.py)
+- **Metadata Spec**: [`pyproject.toml`](file:///Users/ashu/Documents/VMEG/Hackathons/SNIST/Red_Blue/pyproject.toml) (`entrypoint = "backend.app.main:app"`)
+
+#### Environment Variables (Vercel Project Settings)
+
+| Variable | Description | Example / Default |
+|---|---|---|
+| `FRONTEND_URL` | Allowed CORS origin URL | `https://your-project.vercel.app` |
+| `REDBLUE_DB_PATH` | Event store SQLite path | `/tmp/blackbox.db` (auto-detected on Vercel) |
+| `FEATHERLESS_API_KEY` | Featherless API key (Optional) | `featherless_sec_...` |
+| `FEATHERLESS_BASE_URL` | Featherless API base URL | `https://api.featherless.ai/v1` |
+| `FEATHERLESS_MODEL` | Featherless model | `NousResearch/Meta-Llama-3.1-8B-Instruct` |
+
+> **Serverless Ephemeral Storage Note**: On Vercel Serverless Functions, `/tmp/` is writable per function execution, but filesystem storage is ephemeral across cold starts. The REDBLUE deterministic security engine, event collection, CHIMERA verification, and live session discovery operate seamlessly within invocations.
+
+---
+
+### 3. API Routing & Same-Origin Resolution
+
+- **FastAPI Endpoints**: `/health`, `/events`, `/events/sessions`, `/events/run-demo`, `/incidents/analyze`, `/incidents/demo-scenario`, `/incidents/{id}/simulate`, `/incidents/{id}/defend`, `/investigate`.
+- **Same-Origin Access**: When deployed on Vercel, leave `VITE_API_URL` empty or unset in Project Settings, allowing the React frontend to issue same-origin requests (`/events/sessions`). Vercel routes API paths directly to the Python function.
+
+---
+
+### 4. Attacker Package Remote Target Configuration
+
+To test your deployed Vercel backend using the local synthetic attacker package:
+
+```bash
+# In attacker/.env or shell environment
+TARGET_HOST=your-project.vercel.app
+TARGET_PORT=443
+TARGET_SCHEME=https
+TARGET_ENDPOINT=/events/run-demo
+```
+
+Or pass a single target URL:
+
+```bash
+TARGET_URL=https://your-project.vercel.app/events/run-demo
+```
+
+#### Running Remote Scenarios
+
+```bash
+python3 scripts/send_malicious.py
+python3 scripts/send_benign.py
+```
+
+---
+
 # REDBLUE
 
 ### Adaptive Security & Forensic Intelligence for AI Agents & AI Automation
 
 **Built for HackWave 3.0**
+
+

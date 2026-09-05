@@ -19,8 +19,9 @@ class Settings:
 
 
 def get_settings() -> Settings:
+    default_db = "/tmp/blackbox.db" if os.environ.get("VERCEL") else "blackbox.db"
     return Settings(
-        db_path=os.environ.get("BLACKBOX_DB_PATH", "blackbox.db"),
+        db_path=os.environ.get("REDBLUE_DB_PATH") or os.environ.get("BLACKBOX_DB_PATH", default_db),
         featherless_api_key=os.environ.get("FEATHERLESS_API_KEY"),
         featherless_base_url=os.environ.get(
             "FEATHERLESS_BASE_URL", "https://api.featherless.ai/v1"
